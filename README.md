@@ -1,39 +1,39 @@
-[注册 / 登录](https://app.anycrawler.com/login) | [控制面板](https://app.anycrawler.com/overview) | [获取 API Keys](https://app.anycrawler.com/api-keys) | [Public API](https://api.anycrawler.com)
+[🚀 Register / Sign In](https://app.anycrawler.com/login) | [🧭 Dashboard](https://app.anycrawler.com/overview) | [🔑 Get API Keys](https://app.anycrawler.com/api-keys) | [🌐 Public API](https://api.anycrawler.com)
 
-# AnyCrawler Skill for Codex
+# AnyCrawler Skill for Codex ✨
 
-欢迎。这个仓库提供可直接安装到 Codex 的 AnyCrawler skill。当前包含 `anycrawler-crawl-api`，用于通过 AnyCrawler 公共 API 抓取网页内容、结构化信息和截图。
+This repository provides an AnyCrawler skill that can be installed directly into Codex. The current primary skill name is `$anycrawler`, which lets Codex fetch web page content, structured data, and screenshots through the AnyCrawler public API.
 
-## What Is This?
+## 🧩 What Is This?
 
-AnyCrawler 正在构建面向 AI agents 的统一数据访问 API。这个 skill 仓库的目标，是让 Codex 在执行网页抓取任务时优先复用稳定的 AnyCrawler 公共接口，而不是临时拼装请求或依赖未文档化字段。
+AnyCrawler is building a unified data access API for AI agents. The goal of this skill repository is to help Codex reuse the stable AnyCrawler public interface when handling web crawling tasks, instead of assembling ad-hoc requests or depending on undocumented fields.
 
-当前仓库包含：
+This repository currently includes:
 
-- `skill/anycrawler-crawl-api/SKILL.md`: skill 定义与工作流
-- `skill/anycrawler-crawl-api/references/public-api.md`: 稳定公共 API 合约
-- `skill/anycrawler-crawl-api/scripts/anycrawler_crawl_api.py`: 轻量 CLI
-- `skill/anycrawler-crawl-api/agents/openai.yaml`: agent 展示信息和默认提示词
+- `skill/anycrawler-crawl-api/SKILL.md`: the skill definition and workflow for `$anycrawler`
+- `skill/anycrawler-crawl-api/references/public-api.md`: the stable public API contract
+- `skill/anycrawler-crawl-api/scripts/anycrawler_crawl_api.py`: a lightweight CLI
+- `skill/anycrawler-crawl-api/agents/openai.yaml`: agent display metadata and default prompts
 
-## What Can It Do?
+## ⚙️ What Can It Do?
 
-- 调用 `POST /v1/crawl/page` 抓取页面内容
-- 在 `render` 和 `fetch` 两种模式之间做选择
-- 按需返回 `metadata`、`links`、`media`
-- 调用 `POST /v1/crawl/screenshot` 生成截图并返回 `snapshot_url`
-- 输出请求 `meta` 信息，例如 `requestId`、`creditsReserved`、`creditsUsed`
-- 保存 markdown 结果或下载 PNG 截图
+- Call `POST /v1/crawl/page` to fetch page content
+- Choose between `render` and `fetch` modes
+- Return `metadata`, `links`, and `media` when needed
+- Call `POST /v1/crawl/screenshot` to generate a screenshot and return `snapshot_url`
+- Output request `meta` fields such as `requestId`, `creditsReserved`, and `creditsUsed`
+- Save markdown results or download PNG screenshots
 
-## Install
+## 📦 Install
 
-默认安装路径是 `~/.codex/skills`。安装时只需要把 `skill/anycrawler-crawl-api` 复制进去。
+The default installation path is `~/.codex/skills`. The source directory in this repository remains `skill/anycrawler-crawl-api`, but the installed skill directory should ideally be named `anycrawler` so it matches the explicit invocation name `$anycrawler`.
 
 ### macOS / Linux
 
 ```bash
 git clone https://github.com/myeyesareopen/AnyCrawler-Skill.git
 mkdir -p ~/.codex/skills
-cp -R AnyCrawler-Skill/skill/anycrawler-crawl-api ~/.codex/skills/anycrawler-crawl-api
+cp -R AnyCrawler-Skill/skill/anycrawler-crawl-api ~/.codex/skills/anycrawler
 ```
 
 ### Windows PowerShell
@@ -41,18 +41,18 @@ cp -R AnyCrawler-Skill/skill/anycrawler-crawl-api ~/.codex/skills/anycrawler-cra
 ```powershell
 git clone https://github.com/myeyesareopen/AnyCrawler-Skill.git
 New-Item -ItemType Directory -Force "$HOME\.codex\skills" | Out-Null
-Copy-Item -Recurse -Force ".\AnyCrawler-Skill\skill\anycrawler-crawl-api" "$HOME\.codex\skills\anycrawler-crawl-api"
+Copy-Item -Recurse -Force ".\AnyCrawler-Skill\skill\anycrawler-crawl-api" "$HOME\.codex\skills\anycrawler"
 ```
 
-安装完成后，重新开启一个 Codex 会话，让新 skill 被重新发现。
+After installation, start a new Codex session so the new skill can be discovered again.
 
-## Quick Setup
+## 🔑 Quick Setup
 
-在调用 AnyCrawler 之前，先完成以下准备：
+Before using AnyCrawler, complete the following setup:
 
-1. [注册或登录 AnyCrawler](https://app.anycrawler.com/login)
-2. [在控制台创建或复制 API key](https://app.anycrawler.com/api-keys)
-3. 在环境变量中设置 `ANYCRAWLER_API_KEY`
+1. [Register or sign in to AnyCrawler](https://app.anycrawler.com/login)
+2. [Create or copy an API key from the dashboard](https://app.anycrawler.com/api-keys)
+3. Set `ANYCRAWLER_API_KEY` in your environment variables
 
 ### Bash
 
@@ -66,31 +66,31 @@ export ANYCRAWLER_API_KEY="sk-your-key"
 $env:ANYCRAWLER_API_KEY = "sk-your-key"
 ```
 
-可选环境变量：
+Optional environment variables:
 
-- `ANYCRAWLER_BASE_URL`: 默认是 `https://api.anycrawler.com`
+- `ANYCRAWLER_BASE_URL`: defaults to `https://api.anycrawler.com`
 
-## Use in Codex
+## 💬 Use in Codex
 
-你可以在提示里显式点名这个 skill：
+You can explicitly mention the skill in your prompt:
 
 ```text
-Use $anycrawler-crawl-api to crawl https://example.com with render and save markdown.
+Use $anycrawler to crawl https://example.com with render and save markdown.
 ```
 
 ```text
-Use $anycrawler-crawl-api to take a screenshot of https://example.com and download the PNG.
+Use $anycrawler to take a screenshot of https://example.com and download the PNG.
 ```
 
-当任务明显是在调用 AnyCrawler 公共 crawl API 时，Codex 也可以按技能描述自动选择这个 skill。
+If the task is clearly about calling the AnyCrawler public crawl API, Codex can also choose `$anycrawler` automatically based on the skill description.
 
-## Current Public Endpoints
+## 🌍 Current Public Endpoints
 
 - `POST /v1/crawl/page`
 - `POST /v1/crawl/screenshot`
 
-## Notes
+## 📝 Notes
 
-- 这个 skill 只面向稳定公开契约，不依赖旧的 undocumented worker passthrough 字段。
-- 请求字段应使用 snake_case。
-- `anycrawler_crawl_api.py` 仅依赖 Python 标准库，适合在本地或自动化环境中直接调用。
+- This skill targets the stable public contract only and does not depend on legacy undocumented worker passthrough fields.
+- Request fields should use `snake_case`.
+- `anycrawler_crawl_api.py` depends only on the Python standard library, which makes it suitable for direct use in local or automated environments.
