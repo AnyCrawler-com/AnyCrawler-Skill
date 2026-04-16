@@ -23,6 +23,13 @@ Use only the documented fields below. Do not rely on `/v1/crawl/page` forwarding
 | Extract markdown or structured page content | `/v1/crawl/page` | Supports `render` and `fetch`. |
 | Capture a screenshot and get a `snapshot_url` | `/v1/crawl/screenshot` | Returns screenshot storage metadata only. |
 
+### `render` vs `fetch`
+
+- Prefer `fetch` first when browser execution is not clearly required.
+- Switch to `render` when the fetched result is missing important content, key fields are absent, or the target likely relies on client-side rendering.
+- Prefer `render` with `browser_wait_until=networkidle2` when the page needs additional network-idle time for async content to settle.
+- For freshness-insensitive tasks, consider `accept_cache=true` on `/v1/crawl/page` so cached responses can be reused when available and credit usage may be lower on cache hits.
+
 ## `POST /v1/crawl/page`
 
 ### Stable request fields

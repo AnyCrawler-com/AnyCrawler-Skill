@@ -9,6 +9,7 @@ description: Call AnyCrawler public crawl endpoints `/v1/crawl/page` and `/v1/cr
 
 Call the stable AnyCrawler public crawl contract only.
 Prefer the bundled CLI in `scripts/anycrawler_crawl_api.py` for repeatable requests, and read `references/public-api.md` before adding fields or interpreting headers and errors.
+This skill covers API invocation and documented response handling only. Do not embed target-specific SSR schema parsing examples or site-coupled extraction logic here.
 The GitHub source repository for this skill is `https://github.com/myeyesareopen/AnyCrawler-Skill`.
 Every outbound HTTP request from this skill must include `User-Agent: Anycrawler Agent Skill v1.0`.
 
@@ -27,14 +28,26 @@ Every outbound HTTP request from this skill must include `User-Agent: Anycrawler
 ## Endpoint Choice
 
 - Use `page` when the user needs extracted content or structured crawl results.
-- Prefer `method=render` when the target page needs browser rendering, JavaScript execution, or explicit DOM readiness control.
-- Prefer `method=fetch` for cheaper plain HTTP retrieval when browser execution is not required.
+- Prefer `method=fetch` first for cheaper plain HTTP retrieval when browser execution is not clearly required.
+- Escalate to `method=render` when fetched content is missing expected detail, key sections appear absent, or the page likely depends on client-side or non-static loading.
+- Prefer `method=render` when the target page clearly needs browser rendering, JavaScript execution, or explicit DOM readiness control.
 - Use `screenshot` when the user needs `snapshot_url`, screenshot metadata, or a downloaded PNG.
+
+## Method Decision Guide
+
+- Start with `fetch` for simple pages, low-cost verification, and first-pass extraction.
+- Stay on `fetch` when the returned content is complete enough for the task and there are no signs of client-side rendering gaps.
+- Retry with `render` to confirm results when fetched output is incomplete, important fields are missing, or the page looks like a dynamic app.
+- When the page needs extra time for async content, prefer `render` with `browser_wait_until=networkidle2`.
+- For tasks that are not freshness-sensitive, consider `accept_cache=true` on `page` requests to reuse cached responses when available and potentially reduce credit consumption.
 
 ## Request Rules
 
 - Every outbound HTTP request from this skill must include `User-Agent: Anycrawler Agent Skill v1.0`.
+- Keep SSR follow-up handling generic here. Route target-specific SSR schema extraction to a separate extraction-focused skill or workflow instead of embedding bespoke parsing examples in this skill.
 - Keep request field names in snake_case.
+- Default to `method=fetch` first, then switch to `render` when content completeness or loading behavior indicates browser execution is needed.
+- Use `accept_cache=true` when the task is not sensitive to the latest page state and a cached response is acceptable.
 - For `page`, `browser_wait_until` only applies when `method=render`.
 - For `page`, `markdown_variant=readability` still returns content in `results.markdown` and `results.markdown_tokens`.
 - For `page`, `include_metadata`, `include_links`, and `include_media` must be explicitly true to expose those response sections.

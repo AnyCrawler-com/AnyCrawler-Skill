@@ -7,6 +7,7 @@ This repository provides an AnyCrawler skill that can be installed into compatib
 ## 🧩 What Is This?
 
 AnyCrawler is building a unified data access API for AI agents. The goal of this skill repository is to help AI agents reuse the stable AnyCrawler public interface when handling web crawling tasks, instead of assembling ad-hoc requests or depending on undocumented fields.
+This repository is intentionally scoped to the public crawl API surface. It should not carry site-specific SSR schema parsing examples or tightly coupled extraction recipes.
 
 This repository currently includes:
 
@@ -92,6 +93,7 @@ If the task is clearly about calling the AnyCrawler public crawl API, a compatib
 ## 📝 Notes
 
 - This skill targets the stable public contract only and does not depend on legacy undocumented worker passthrough fields.
+- Keep SSR follow-up parsing generic in this repository. Site-specific SSR extraction logic should live in a separate extraction-focused skill or workflow.
 - Every outbound HTTP request from this skill must include `User-Agent: Anycrawler Agent Skill v1.0`.
 - Request fields should use `snake_case`.
 - `anycrawler_crawl_api.py` depends only on the Python standard library, which makes it suitable for direct use in local or automated environments.
