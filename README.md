@@ -1,12 +1,12 @@
 [🚀 Register / Sign In](https://app.anycrawler.com/login) | [🧭 Dashboard](https://app.anycrawler.com/overview) | [🔑 Get API Keys](https://app.anycrawler.com/api-keys) | [🌐 Public API](https://api.anycrawler.com)
 
-# AnyCrawler Skill for Codex ✨
+# AnyCrawler Skill for AI Agents ✨
 
-This repository provides an AnyCrawler skill that can be installed directly into Codex. The current primary skill name is `$anycrawler`, which lets Codex fetch web page content, structured data, and screenshots through the AnyCrawler public API.
+This repository provides an AnyCrawler skill that can be installed into compatible AI agent runtimes. The current primary skill name is `$anycrawler`, which lets an AI agent fetch web page content, structured data, and screenshots through the AnyCrawler public API.
 
 ## 🧩 What Is This?
 
-AnyCrawler is building a unified data access API for AI agents. The goal of this skill repository is to help Codex reuse the stable AnyCrawler public interface when handling web crawling tasks, instead of assembling ad-hoc requests or depending on undocumented fields.
+AnyCrawler is building a unified data access API for AI agents. The goal of this skill repository is to help AI agents reuse the stable AnyCrawler public interface when handling web crawling tasks, instead of assembling ad-hoc requests or depending on undocumented fields.
 
 This repository currently includes:
 
@@ -26,7 +26,7 @@ This repository currently includes:
 
 ## 📦 Install
 
-The default installation path is `~/.codex/skills`. The source directory in this repository remains `skill/anycrawler-crawl-api`, but the installed skill directory should ideally be named `anycrawler` so it matches the explicit invocation name `$anycrawler`.
+A common installation path is `~/.codex/skills`. The source directory in this repository remains `skill/anycrawler-crawl-api`, but the installed skill directory should ideally be named `anycrawler` so it matches the explicit invocation name `$anycrawler`.
 
 ### macOS / Linux
 
@@ -44,7 +44,7 @@ New-Item -ItemType Directory -Force "$HOME\.codex\skills" | Out-Null
 Copy-Item -Recurse -Force ".\AnyCrawler-Skill\skill\anycrawler-crawl-api" "$HOME\.codex\skills\anycrawler"
 ```
 
-After installation, start a new Codex session so the new skill can be discovered again.
+After installation, start a new AI agent session so the new skill can be discovered again.
 
 ## 🔑 Quick Setup
 
@@ -70,7 +70,7 @@ Optional environment variables:
 
 - `ANYCRAWLER_BASE_URL`: defaults to `https://api.anycrawler.com`
 
-## 💬 Use in Codex
+## 💬 Use with an AI Agent
 
 You can explicitly mention the skill in your prompt:
 
@@ -82,7 +82,7 @@ Use $anycrawler to crawl https://example.com with render and save markdown.
 Use $anycrawler to take a screenshot of https://example.com and download the PNG.
 ```
 
-If the task is clearly about calling the AnyCrawler public crawl API, Codex can also choose `$anycrawler` automatically based on the skill description.
+If the task is clearly about calling the AnyCrawler public crawl API, a compatible AI agent can also choose `$anycrawler` automatically based on the skill description.
 
 ## 🌍 Current Public Endpoints
 

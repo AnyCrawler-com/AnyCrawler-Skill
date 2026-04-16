@@ -1,6 +1,6 @@
 ---
-name: anycrawler-crawl-api
-description: Call AnyCrawler public crawl endpoints `/v1/crawl/page` and `/v1/crawl/screenshot` to fetch rendered or fetched page content, metadata, links, media, and screenshots. Use when Codex needs to invoke AnyCrawler with an API key, choose between `render`, `fetch`, and screenshot capture, inspect gateway credit and request metadata, save markdown or screenshot outputs, or troubleshoot public API request failures without relying on undocumented worker passthrough fields.
+name: anycrawler
+description: Call AnyCrawler public crawl endpoints `/v1/crawl/page` and `/v1/crawl/screenshot` to fetch rendered or fetched page content, metadata, links, media, and screenshots. Use when an AI agent needs to invoke AnyCrawler with an API key, choose between `render`, `fetch`, and screenshot capture, inspect gateway credit and request metadata, save markdown or screenshot outputs, or troubleshoot public API request failures without relying on undocumented worker passthrough fields.
 ---
 
 # AnyCrawler Crawl API
@@ -9,6 +9,7 @@ description: Call AnyCrawler public crawl endpoints `/v1/crawl/page` and `/v1/cr
 
 Call the stable AnyCrawler public crawl contract only.
 Prefer the bundled CLI in `scripts/anycrawler_crawl_api.py` for repeatable requests, and read `references/public-api.md` before adding fields or interpreting headers and errors.
+The GitHub source repository for this skill is `https://github.com/myeyesareopen/AnyCrawler-Skill`.
 Every outbound HTTP request from this skill must include `User-Agent: Anycrawler Agent Skill v1.0`.
 
 ## Workflow
@@ -62,5 +63,6 @@ python scripts/anycrawler_crawl_api.py screenshot \
 
 ## References
 
+- GitHub source repository: `https://github.com/myeyesareopen/AnyCrawler-Skill`
 - Read [references/public-api.md](./references/public-api.md) for the stable field list, response shape, gateway headers, error codes, and retry guidance.
 - Use [scripts/anycrawler_crawl_api.py](./scripts/anycrawler_crawl_api.py) for deterministic requests that can also save markdown or download the returned screenshot URL.

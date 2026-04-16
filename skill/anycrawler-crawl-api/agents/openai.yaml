@@ -1,4 +1,4 @@
 interface:
   display_name: "AnyCrawler Crawl API"
   short_description: "Call AnyCrawler page and screenshot public APIs"
-  default_prompt: "Use $anycrawler-crawl-api to call AnyCrawler's public page or screenshot API for this task."
+  default_prompt: "Use $anycrawler to call AnyCrawler's public page or screenshot API for this task."
