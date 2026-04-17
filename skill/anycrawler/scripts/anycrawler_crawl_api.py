@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -83,14 +84,16 @@ def _download_file(url: str, path: str | Path, timeout: float) -> None:
     )
     try:
         with urllib_request.urlopen(request, timeout=timeout) as response:
-            content = response.read()
+            output_path = Path(path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            with output_path.open("wb") as output_file:
+                shutil.copyfileobj(response, output_file)
+    except urllib_error.HTTPError as exc:
+        message = f"Snapshot download failed with HTTP {exc.code} {exc.reason} for {url}"
+        raise SystemExit(message) from exc
     except urllib_error.URLError as exc:
         message = f"Snapshot download failed before receiving an HTTP response: {exc.reason}"
         raise SystemExit(message) from exc
-
-    output_path = Path(path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_bytes(content)
 
 
 def _perform_request(
@@ -142,7 +145,7 @@ def _page_payload(args: argparse.Namespace) -> dict[str, Any]:
         "include_media": args.include_media,
         "markdown_variant": args.markdown_variant,
     }
-    if args.browser_wait_until is not None:
+    if args.method == "render" and args.browser_wait_until is not None:
         payload["browser_wait_until"] = args.browser_wait_until
     if args.user_agent is not None:
         payload["user_agent"] = args.user_agent
@@ -191,6 +194,11 @@ def _download_snapshot_output(wrapper: dict[str, Any], path: str | Path, timeout
         raise SystemExit("Cannot download snapshot because results.snapshot_url is missing.")
 
     _download_file(snapshot_url, path, timeout)
+
+
+def _request_succeeded(wrapper: dict[str, Any], status: int) -> bool:
+    data = wrapper.get("data")
+    return status < 400 and not (isinstance(data, dict) and data.get("ok") is False)
 
 
 def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
@@ -293,8 +301,6 @@ def main() -> int:
             payload=_page_payload(args),
             timeout=args.timeout,
         )
-        if args.write_markdown:
-            _write_markdown_output(wrapper, args.write_markdown)
     else:
         wrapper, status = _perform_request(
             api_key=api_key,
@@ -303,8 +309,6 @@ def main() -> int:
             payload=_screenshot_payload(args),
             timeout=args.timeout,
         )
-        if args.download_snapshot:
-            _download_snapshot_output(wrapper, args.download_snapshot, args.timeout)
 
     if args.output:
         _write_json_file(args.output, wrapper)
@@ -313,9 +317,14 @@ def main() -> int:
         json.dump(wrapper, sys.stdout, ensure_ascii=False, indent=2)
         sys.stdout.write("\n")
 
-    data = wrapper.get("data")
-    ok = isinstance(data, dict) and data.get("ok") is False
-    return 1 if status >= 400 or ok else 0
+    if _request_succeeded(wrapper, status):
+        if args.command == "page" and args.write_markdown:
+            _write_markdown_output(wrapper, args.write_markdown)
+        if args.command == "screenshot" and args.download_snapshot:
+            _download_snapshot_output(wrapper, args.download_snapshot, args.timeout)
+        return 0
+
+    return 1
 
 
 if __name__ == "__main__":

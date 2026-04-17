@@ -11,10 +11,10 @@ This repository is intentionally scoped to the public crawl API surface. It shou
 
 This repository currently includes:
 
-- `skill/anycrawler-crawl-api/SKILL.md`: the skill definition and workflow for `$anycrawler`
-- `skill/anycrawler-crawl-api/references/public-api.md`: the stable public API contract
-- `skill/anycrawler-crawl-api/scripts/anycrawler_crawl_api.py`: a lightweight CLI
-- `skill/anycrawler-crawl-api/agents/openai.yaml`: agent display metadata and default prompts
+- `skill/anycrawler/SKILL.md`: the skill definition and workflow for `$anycrawler`
+- `skill/anycrawler/references/public-api.md`: the stable public API contract
+- `skill/anycrawler/scripts/anycrawler_crawl_api.py`: a lightweight CLI
+- `skill/anycrawler/agents/openai.yaml`: agent display metadata and default prompts
 
 ## ⚙️ What Can It Do?
 
@@ -28,14 +28,14 @@ This repository currently includes:
 
 ## 📦 Install
 
-A common installation path is `~/.codex/skills`. The source directory in this repository remains `skill/anycrawler-crawl-api`, but the installed skill directory should ideally be named `anycrawler` so it matches the explicit invocation name `$anycrawler`.
+A common installation path is `~/.codex/skills`. The source directory in this repository is `skill/anycrawler`, and the installed skill directory should also be named `anycrawler` so it matches the explicit invocation name `$anycrawler`.
 
 ### macOS / Linux
 
 ```bash
 git clone https://github.com/myeyesareopen/AnyCrawler-Skill.git
 mkdir -p ~/.codex/skills
-cp -R AnyCrawler-Skill/skill/anycrawler-crawl-api ~/.codex/skills/anycrawler
+cp -R AnyCrawler-Skill/skill/anycrawler ~/.codex/skills/anycrawler
 ```
 
 ### Windows PowerShell
@@ -43,7 +43,7 @@ cp -R AnyCrawler-Skill/skill/anycrawler-crawl-api ~/.codex/skills/anycrawler
 ```powershell
 git clone https://github.com/myeyesareopen/AnyCrawler-Skill.git
 New-Item -ItemType Directory -Force "$HOME\.codex\skills" | Out-Null
-Copy-Item -Recurse -Force ".\AnyCrawler-Skill\skill\anycrawler-crawl-api" "$HOME\.codex\skills\anycrawler"
+Copy-Item -Recurse -Force ".\AnyCrawler-Skill\skill\anycrawler" "$HOME\.codex\skills\anycrawler"
 ```
 
 After installation, start a new AI agent session so the new skill can be discovered again.
@@ -85,6 +85,18 @@ Use $anycrawler to take a screenshot of https://example.com and download the PNG
 ```
 
 If the task is clearly about calling the AnyCrawler public crawl API, a compatible AI agent can also choose `$anycrawler` automatically based on the skill description.
+
+From the repository root, you can also run the bundled CLI directly:
+
+```bash
+python skill/anycrawler/scripts/anycrawler_crawl_api.py page \
+  --url https://example.com \
+  --include-metadata
+
+python skill/anycrawler/scripts/anycrawler_crawl_api.py screenshot \
+  --url https://example.com \
+  --download-snapshot snapshot.png
+```
 
 ## 🌍 Current Public Endpoints
 

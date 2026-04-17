@@ -1,3 +1,4 @@
 .omx/
 .codex/
 AGENTS.md
+__pycache__/
