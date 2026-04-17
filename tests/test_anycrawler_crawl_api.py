@@ -17,6 +17,12 @@ SPEC.loader.exec_module(MODULE)
 
 
 class AnyCrawlerCrawlApiTests(unittest.TestCase):
+    def test_user_agent_uses_version_file(self) -> None:
+        version = (MODULE.SKILL_ROOT / "VERSION").read_text(encoding="utf-8").strip()
+
+        self.assertEqual(MODULE.SKILL_VERSION, version)
+        self.assertEqual(MODULE.DEFAULT_SKILL_USER_AGENT, f"Anycrawler Agent Skill v{version}")
+
     def test_page_payload_omits_browser_wait_until_for_fetch(self) -> None:
         args = argparse.Namespace(
             url="https://example.com",
@@ -75,6 +81,14 @@ class AnyCrawlerCrawlApiTests(unittest.TestCase):
             self.assertTrue(output_path.exists())
             self.assertFalse(markdown_path.exists())
             self.assertEqual(json.loads(output_path.read_text(encoding="utf-8")), wrapper)
+
+    def test_parser_supports_version_flag(self) -> None:
+        parser = MODULE._build_parser()
+
+        with self.assertRaises(SystemExit) as exc:
+            parser.parse_args(["--version"])
+
+        self.assertEqual(exc.exception.code, 0)
 
 
 if __name__ == "__main__":

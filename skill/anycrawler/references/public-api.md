@@ -10,7 +10,9 @@ Use only the documented fields below. Do not rely on `/v1/crawl/page` forwarding
 ## Base URL and Auth
 
 - Base URL: `https://api.anycrawler.com`
-- Required client header: `User-Agent: Anycrawler Agent Skill v1.0`
+- Skill release: `0.1.0`
+- API compatibility: `AnyCrawler Public API v1`
+- Required client header for this release: `User-Agent: Anycrawler Agent Skill v0.1.0`
 - Supported auth headers:
   - `Authorization: Bearer <apiKey>`
   - `x-api-key: <apiKey>`

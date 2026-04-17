@@ -12,6 +12,7 @@ This repository is intentionally scoped to the public crawl API surface. It shou
 This repository currently includes:
 
 - `skill/anycrawler/SKILL.md`: the skill definition and workflow for `$anycrawler`
+- `skill/anycrawler/VERSION`: the single source of truth for the skill release version
 - `skill/anycrawler/references/public-api.md`: the stable public API contract
 - `skill/anycrawler/scripts/anycrawler_crawl_api.py`: a lightweight CLI
 - `skill/anycrawler/agents/openai.yaml`: agent display metadata and default prompts
@@ -48,6 +49,28 @@ Copy-Item -Recurse -Force ".\AnyCrawler-Skill\skill\anycrawler" "$HOME\.codex\sk
 ```
 
 After installation, start a new AI agent session so the new skill can be discovered again.
+
+## Versioning And Releases
+
+- Initial public release: `v0.1.0`
+- Skill version source of truth: `skill/anycrawler/VERSION`
+- Current API compatibility statement: `AnyCrawler Public API v1`
+- Branch strategy: keep `master` as the ongoing development branch
+- Release strategy: publish stable snapshots with annotated git tags such as `v0.1.0`
+
+Version bump rules:
+
+- Bump `MAJOR` for breaking changes to CLI flags, output shape, skill invocation contract, or installation expectations
+- Bump `MINOR` for backward-compatible new capabilities, endpoints, or optional fields
+- Bump `PATCH` for backward-compatible fixes, doc corrections, and internal refactors
+
+Release checklist:
+
+1. Update `skill/anycrawler/VERSION`
+2. Run tests for the bundled CLI
+3. Verify docs still match the current `User-Agent` and API compatibility statement
+4. Create an annotated tag such as `git tag -a v0.1.0 -m "First public AnyCrawler skill release"`
+5. Push the branch and tag, then create a GitHub Release from that tag
 
 ## 🔑 Quick Setup
 
@@ -108,7 +131,8 @@ python skill/anycrawler/scripts/anycrawler_crawl_api.py screenshot \
 
 - This skill targets the stable public contract only and does not depend on legacy undocumented worker passthrough fields.
 - Keep SSR follow-up parsing generic in this repository. Site-specific SSR extraction logic should live in a separate extraction-focused skill or workflow.
-- Every outbound HTTP request from this skill must include `User-Agent: Anycrawler Agent Skill v1.0`.
+- Every outbound HTTP request from this skill currently includes `User-Agent: Anycrawler Agent Skill v0.1.0`.
+- The `User-Agent` release number is derived from `skill/anycrawler/VERSION`.
 - Request fields should use `snake_case`.
 - `anycrawler_crawl_api.py` depends only on the Python standard library, which makes it suitable for direct use in local or automated environments.
 - Treat `429` responses as quota exhaustion or rate limiting signals; check account capacity and throttling before retrying.

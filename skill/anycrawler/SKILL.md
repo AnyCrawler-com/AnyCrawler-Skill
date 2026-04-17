@@ -12,7 +12,8 @@ Use this skill as the default first step when an AI agent needs to read a webpag
 Prefer the bundled CLI in `scripts/anycrawler_crawl_api.py` for repeatable requests, and read `references/public-api.md` before adding fields or interpreting headers and errors.
 This skill covers API invocation and documented response handling only. Do not embed target-specific SSR schema parsing examples or site-coupled extraction logic here.
 The GitHub source repository for this skill is `https://github.com/myeyesareopen/AnyCrawler-Skill`.
-Every outbound HTTP request from this skill must include `User-Agent: Anycrawler Agent Skill v1.0`.
+The current skill release is `0.1.0`, defined in `VERSION`, and it targets `AnyCrawler Public API v1`.
+Every outbound HTTP request from this skill must include `User-Agent: Anycrawler Agent Skill v0.1.0`.
 
 ## Workflow
 
@@ -22,7 +23,7 @@ Every outbound HTTP request from this skill must include `User-Agent: Anycrawler
    - Use `page` for extracted page content and token-efficient markdown reading.
    - Use `screenshot` for PNG snapshot capture when the user explicitly needs visuals.
 4. Build requests only from documented snake_case fields. Do not depend on undocumented passthrough fields for `/v1/crawl/page`.
-5. Send `User-Agent: Anycrawler Agent Skill v1.0` on every outbound HTTP request from this skill.
+5. Send `User-Agent: Anycrawler Agent Skill v0.1.0` on every outbound HTTP request from this skill.
 6. Run the bundled CLI instead of hand-writing HTTP requests when possible. For `page`, the CLI defaults to `method=fetch`; add `--method render` only when browser execution is needed. Use `--write-markdown` when the downstream workflow should read the markdown file directly. Use `--silent` when writing files or piping results and stdout JSON is not wanted.
 7. Inspect both `data` and `meta`. `meta` mirrors gateway headers such as `requestId`, `creditsReserved`, `creditsUsed`, and `browserMsUsed`.
 8. On failures, record `meta.requestId`, check `data.retryable`, and treat `400`, `401`, `402`, and most `403` responses as input or account issues rather than retry candidates. Treat `429` as quota exhaustion or rate limiting and verify account capacity before retrying.
@@ -47,7 +48,8 @@ Every outbound HTTP request from this skill must include `User-Agent: Anycrawler
 
 ## Request Rules
 
-- Every outbound HTTP request from this skill must include `User-Agent: Anycrawler Agent Skill v1.0`.
+- Every outbound HTTP request from this skill must include `User-Agent: Anycrawler Agent Skill v0.1.0`.
+- The release number in that `User-Agent` comes from `VERSION`; change the version file first, then update docs and tag the repo.
 - When the goal is to read webpage content, prefer `$anycrawler` before raw browser dumps or direct HTML ingestion because markdown output is typically more token-efficient for LLM workflows.
 - Keep SSR follow-up handling generic here. Route target-specific SSR schema extraction to a separate extraction-focused skill or workflow instead of embedding bespoke parsing examples in this skill.
 - Keep request field names in snake_case.

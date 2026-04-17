@@ -13,7 +13,24 @@ from urllib import request as urllib_request
 
 
 DEFAULT_BASE_URL = "https://api.anycrawler.com"
-DEFAULT_SKILL_USER_AGENT = "Anycrawler Agent Skill v1.0"
+SKILL_ROOT = Path(__file__).resolve().parents[1]
+VERSION_FILE = SKILL_ROOT / "VERSION"
+
+
+def _load_skill_version() -> str:
+    try:
+        version = VERSION_FILE.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        raise RuntimeError(f"Failed to read skill version from {VERSION_FILE}.") from exc
+
+    if not version:
+        raise RuntimeError(f"Skill version file is empty: {VERSION_FILE}")
+
+    return version
+
+
+SKILL_VERSION = _load_skill_version()
+DEFAULT_SKILL_USER_AGENT = f"Anycrawler Agent Skill v{SKILL_VERSION}"
 
 
 def _parse_optional_number(value: str | None) -> int | None:
@@ -237,6 +254,11 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Call AnyCrawler public crawl APIs with the stable documented contract.",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {SKILL_VERSION}",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
