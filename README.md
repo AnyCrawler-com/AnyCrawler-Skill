@@ -20,7 +20,7 @@ A common installation path is `~/.codex/skills`. The source directory in this re
 ### macOS / Linux
 
 ```bash
-git clone https://github.com/myeyesareopen/AnyCrawler-Skill.git
+git clone https://github.com/AnyCrawler-com/AnyCrawler-Skill.git
 mkdir -p ~/.codex/skills
 cp -R AnyCrawler-Skill/skill/anycrawler ~/.codex/skills/anycrawler
 ```
@@ -28,12 +28,14 @@ cp -R AnyCrawler-Skill/skill/anycrawler ~/.codex/skills/anycrawler
 ### Windows PowerShell
 
 ```powershell
-git clone https://github.com/myeyesareopen/AnyCrawler-Skill.git
+git clone https://github.com/AnyCrawler-com/AnyCrawler-Skill.git
 New-Item -ItemType Directory -Force "$HOME\.codex\skills" | Out-Null
 Copy-Item -Recurse -Force ".\AnyCrawler-Skill\skill\anycrawler" "$HOME\.codex\skills\anycrawler"
 ```
 
 After installation, start a new AI agent session so the new skill can be discovered again.
+
+On the first managed-install invocation in each agent session, the bundled CLI checks the latest tagged release from `AnyCrawler-com/AnyCrawler-Skill`. If the installed skill is behind, it upgrades itself before running the crawl command. Direct repo checkouts skip self-mutation.
 
 ## Quick setup
 

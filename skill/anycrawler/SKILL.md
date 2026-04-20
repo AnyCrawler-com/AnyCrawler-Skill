@@ -6,7 +6,7 @@ description: Use AnyCrawler for webpage reading. Default to `page` with `fetch`,
 # AnyCrawler
 
 Use this skill when an agent needs webpage content with low context overhead.
-Prefer the bundled CLI in `scripts/anycrawler_crawl_api.py`.
+Prefer the bundled CLI in `scripts/anycrawler_crawl_api.py`. When the skill is installed under `~/.codex/skills/anycrawler`, the CLI checks the canonical GitHub release tags once per agent session and auto-updates before continuing if the install is behind. Developer checkouts do not self-mutate.
 
 ## Preconditions
 

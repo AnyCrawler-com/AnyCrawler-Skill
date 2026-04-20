@@ -6,6 +6,9 @@ import json
 import os
 import shutil
 import sys
+import tempfile
+import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib import error as urllib_error
@@ -13,24 +16,85 @@ from urllib import request as urllib_request
 
 
 DEFAULT_BASE_URL = "https://api.anycrawler.com"
-SKILL_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_UPDATE_REPOSITORY = "AnyCrawler-com/AnyCrawler-Skill"
+DEFAULT_UPDATE_TIMEOUT = 5.0
+AUTO_UPDATE_DISABLE_VALUES = {"0", "false", "no", "off"}
+AUTO_UPDATE_SESSION_ENV_NAMES = (
+    "OMX_SESSION_ID",
+    "CODEX_SESSION_ID",
+    "OPENAI_CODEX_SESSION_ID",
+    "CHATGPT_SESSION_ID",
+)
+SESSION_STATE_FILE_NAME = "session-checks.json"
+SESSION_HISTORY_LIMIT = 40
+REQUIRED_SKILL_FILES = (
+    Path("SKILL.md"),
+    Path("VERSION"),
+    Path("agents/openai.yaml"),
+    Path("references/public-api.md"),
+    Path("scripts/anycrawler_crawl_api.py"),
+)
+SCRIPT_FILE = Path(__file__).resolve()
+SKILL_ROOT = SCRIPT_FILE.parents[1]
 VERSION_FILE = SKILL_ROOT / "VERSION"
 
 
-def _load_skill_version() -> str:
+def _load_skill_version_from(path: Path) -> str:
     try:
-        version = VERSION_FILE.read_text(encoding="utf-8").strip()
+        version = path.read_text(encoding="utf-8").strip()
     except OSError as exc:
-        raise RuntimeError(f"Failed to read skill version from {VERSION_FILE}.") from exc
+        raise RuntimeError(f"Failed to read skill version from {path}.") from exc
 
     if not version:
-        raise RuntimeError(f"Skill version file is empty: {VERSION_FILE}")
+        raise RuntimeError(f"Skill version file is empty: {path}")
 
     return version
 
 
+def _load_skill_version() -> str:
+    return _load_skill_version_from(VERSION_FILE)
+
+
 SKILL_VERSION = _load_skill_version()
 DEFAULT_SKILL_USER_AGENT = f"Anycrawler Agent Skill v{SKILL_VERSION}"
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _emit_update_debug(message: str) -> None:
+    if os.getenv("ANYCRAWLER_AUTO_UPDATE_DEBUG", "").strip().lower() in {"1", "true", "yes", "on"}:
+        print(f"[anycrawler-auto-update] {message}", file=sys.stderr)
+
+
+def _normalize_version(version: str) -> str:
+    normalized = version.strip()
+    if normalized.startswith("v"):
+        return normalized[1:]
+    return normalized
+
+
+def _parse_version_tuple(version: str) -> tuple[int, ...] | None:
+    normalized = _normalize_version(version)
+    if not normalized:
+        return None
+
+    pieces = normalized.split(".")
+    parsed: list[int] = []
+    for piece in pieces:
+        if not piece.isdigit():
+            return None
+        parsed.append(int(piece))
+    return tuple(parsed)
+
+
+def _is_newer_version(remote_version: str, local_version: str) -> bool:
+    remote_tuple = _parse_version_tuple(remote_version)
+    local_tuple = _parse_version_tuple(local_version)
+    if remote_tuple is None or local_tuple is None:
+        return False
+    return remote_tuple > local_tuple
 
 
 def _parse_optional_number(value: str | None) -> int | None:
@@ -90,27 +154,400 @@ def _write_json_file(path: str | Path, payload: Any) -> None:
     _write_text_file(path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
 
 
-def _download_file(url: str, path: str | Path, timeout: float) -> None:
+def _read_json_file(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+    return payload if isinstance(payload, dict) else {}
+
+
+def _download_bytes(url: str, timeout: float, *, accept: str) -> bytes:
     request = urllib_request.Request(
         url,
         headers={
-            "Accept": "*/*",
+            "Accept": accept,
             "User-Agent": DEFAULT_SKILL_USER_AGENT,
         },
         method="GET",
     )
+    with urllib_request.urlopen(request, timeout=timeout) as response:
+        return response.read()
+
+
+def _download_file(url: str, path: str | Path, timeout: float) -> None:
     try:
-        with urllib_request.urlopen(request, timeout=timeout) as response:
-            output_path = Path(path)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            with output_path.open("wb") as output_file:
-                shutil.copyfileobj(response, output_file)
+        body = _download_bytes(url, timeout, accept="*/*")
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(body)
     except urllib_error.HTTPError as exc:
         message = f"Snapshot download failed with HTTP {exc.code} {exc.reason} for {url}"
         raise SystemExit(message) from exc
     except urllib_error.URLError as exc:
         message = f"Snapshot download failed before receiving an HTTP response: {exc.reason}"
         raise SystemExit(message) from exc
+
+
+def _resolve_update_timeout() -> float:
+    raw = os.getenv("ANYCRAWLER_UPDATE_TIMEOUT")
+    if raw is None:
+        return DEFAULT_UPDATE_TIMEOUT
+
+    try:
+        value = float(raw)
+    except ValueError:
+        return DEFAULT_UPDATE_TIMEOUT
+
+    return value if value > 0 else DEFAULT_UPDATE_TIMEOUT
+
+
+def _resolve_update_repository() -> str:
+    repository = os.getenv("ANYCRAWLER_UPDATE_REPOSITORY", DEFAULT_UPDATE_REPOSITORY).strip()
+    return repository or DEFAULT_UPDATE_REPOSITORY
+
+
+def _is_auto_update_enabled() -> bool:
+    raw = os.getenv("ANYCRAWLER_AUTO_UPDATE", "1").strip().lower()
+    return raw not in AUTO_UPDATE_DISABLE_VALUES
+
+
+def _should_run_auto_update(argv: list[str]) -> bool:
+    if not argv:
+        return False
+
+    return all(flag not in {"--version", "-h", "--help"} for flag in argv)
+
+
+def _expected_managed_skill_root() -> Path:
+    override = os.getenv("ANYCRAWLER_MANAGED_INSTALL_ROOT")
+    if override:
+        return Path(override).expanduser().resolve()
+
+    codex_home = os.getenv("CODEX_HOME")
+    if codex_home:
+        return (Path(codex_home).expanduser() / "skills" / "anycrawler").resolve()
+
+    return (Path.home() / ".codex" / "skills" / "anycrawler").resolve()
+
+
+def _is_managed_skill_install(skill_root: Path = SKILL_ROOT) -> bool:
+    try:
+        return skill_root.resolve() == _expected_managed_skill_root()
+    except OSError:
+        return False
+
+
+def _resolve_state_dir() -> Path:
+    override = os.getenv("ANYCRAWLER_STATE_DIR")
+    if override:
+        return Path(override).expanduser()
+
+    codex_home = os.getenv("CODEX_HOME")
+    if codex_home:
+        return Path(codex_home).expanduser() / "skills" / ".anycrawler-state"
+
+    return Path.home() / ".codex" / "skills" / ".anycrawler-state"
+
+
+def _session_state_path(state_dir: Path | None = None) -> Path:
+    return (state_dir or _resolve_state_dir()) / SESSION_STATE_FILE_NAME
+
+
+def _load_session_state(state_dir: Path | None = None) -> dict[str, Any]:
+    return _read_json_file(_session_state_path(state_dir))
+
+
+def _save_session_state(payload: dict[str, Any], state_dir: Path | None = None) -> None:
+    path = _session_state_path(state_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _session_was_checked(session_key: str, *, state_dir: Path | None = None) -> bool:
+    payload = _load_session_state(state_dir)
+    sessions = payload.get("sessions")
+    return isinstance(sessions, dict) and session_key in sessions
+
+
+def _mark_session_checked(
+    session_key: str,
+    *,
+    state_dir: Path | None = None,
+    local_version: str,
+    latest_version: str | None,
+    outcome: str,
+) -> None:
+    payload = _load_session_state(state_dir)
+    sessions = payload.setdefault("sessions", {})
+    if not isinstance(sessions, dict):
+        sessions = {}
+        payload["sessions"] = sessions
+
+    sessions[session_key] = {
+        "checked_at": _utc_now(),
+        "local_version": local_version,
+        "latest_version": latest_version,
+        "outcome": outcome,
+    }
+
+    ordered = sorted(
+        sessions.items(),
+        key=lambda item: item[1].get("checked_at", ""),
+        reverse=True,
+    )
+    payload["sessions"] = dict(ordered[:SESSION_HISTORY_LIMIT])
+    _save_session_state(payload, state_dir)
+
+
+def _session_key_from_env() -> str | None:
+    for env_name in AUTO_UPDATE_SESSION_ENV_NAMES:
+        value = os.getenv(env_name)
+        if value:
+            return f"env:{env_name}:{value}"
+    return None
+
+
+def _session_key_from_nearby_omx(start_path: Path) -> str | None:
+    for candidate in (start_path, *start_path.parents):
+        session_file = candidate / ".omx" / "state" / "session.json"
+        if not session_file.is_file():
+            continue
+
+        payload = _read_json_file(session_file)
+        for key in ("native_session_id", "session_id"):
+            value = payload.get(key)
+            if isinstance(value, str) and value:
+                return f"omx:{value}"
+    return None
+
+
+def _discover_session_key(skill_root: Path = SKILL_ROOT) -> str:
+    from_env = _session_key_from_env()
+    if from_env:
+        return from_env
+
+    for start_path in (Path.cwd().resolve(), skill_root.resolve()):
+        from_omx = _session_key_from_nearby_omx(start_path)
+        if from_omx:
+            return from_omx
+
+    return f"fallback:{os.getppid()}:{Path.cwd().resolve()}"
+
+
+def _fetch_json(url: str, timeout: float) -> Any:
+    body = _download_bytes(url, timeout, accept="application/vnd.github+json")
+    return json.loads(body.decode("utf-8"))
+
+
+def _fetch_latest_release_tag(*, timeout: float, repository: str | None = None) -> tuple[str, str] | None:
+    repo = repository or _resolve_update_repository()
+    payload = _fetch_json(f"https://api.github.com/repos/{repo}/tags?per_page=100", timeout)
+    if not isinstance(payload, list):
+        raise RuntimeError("GitHub tags API returned an unexpected payload.")
+
+    latest: tuple[tuple[int, ...], str, str] | None = None
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        raw_tag = item.get("name")
+        if not isinstance(raw_tag, str):
+            continue
+
+        version_tuple = _parse_version_tuple(raw_tag)
+        if version_tuple is None:
+            continue
+
+        version = _normalize_version(raw_tag)
+        if latest is None or version_tuple > latest[0]:
+            latest = (version_tuple, raw_tag, version)
+
+    if latest is None:
+        return None
+
+    return latest[1], latest[2]
+
+
+def _find_extracted_skill_root(extract_dir: Path) -> Path:
+    matches = list(extract_dir.glob("*/skill/anycrawler"))
+    if len(matches) != 1:
+        raise RuntimeError("Failed to locate skill/anycrawler in the downloaded release archive.")
+    return matches[0]
+
+
+def _validate_skill_tree(skill_root: Path, *, expected_version: str | None = None) -> str:
+    for relative_path in REQUIRED_SKILL_FILES:
+        candidate = skill_root / relative_path
+        if not candidate.exists():
+            raise RuntimeError(f"Downloaded skill is missing required path: {relative_path}")
+
+    version = _load_skill_version_from(skill_root / "VERSION")
+    if expected_version is not None and version != expected_version:
+        raise RuntimeError(
+            f"Downloaded skill version mismatch: expected {expected_version}, received {version}."
+        )
+
+    return version
+
+
+def _stage_latest_skill_release(
+    *,
+    tag: str,
+    version: str,
+    repository: str,
+    timeout: float,
+    temp_dir: Path,
+) -> Path:
+    archive_path = temp_dir / f"{tag}.zip"
+    archive_path.write_bytes(
+        _download_bytes(
+            f"https://github.com/{repository}/archive/refs/tags/{tag}.zip",
+            timeout,
+            accept="application/zip",
+        )
+    )
+
+    extract_dir = temp_dir / "extract"
+    with zipfile.ZipFile(archive_path) as archive:
+        archive.extractall(extract_dir)
+
+    extracted_skill_root = _find_extracted_skill_root(extract_dir)
+    _validate_skill_tree(extracted_skill_root, expected_version=version)
+
+    staged_skill_root = temp_dir / "staged-anycrawler"
+    shutil.copytree(extracted_skill_root, staged_skill_root)
+    return staged_skill_root
+
+
+def _replace_managed_skill_root(*, skill_root: Path, staged_skill_root: Path, state_dir: Path) -> Path:
+    state_dir.mkdir(parents=True, exist_ok=True)
+    backups_dir = state_dir / "backups"
+    backups_dir.mkdir(parents=True, exist_ok=True)
+
+    current_version = _load_skill_version_from(skill_root / "VERSION")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    backup_root = backups_dir / f"anycrawler-{current_version}-{timestamp}"
+    replacement_root = skill_root.parent / f".anycrawler-replacement-{timestamp}"
+
+    if replacement_root.exists():
+        shutil.rmtree(replacement_root)
+
+    shutil.move(str(staged_skill_root), str(replacement_root))
+
+    try:
+        shutil.move(str(skill_root), str(backup_root))
+        try:
+            shutil.move(str(replacement_root), str(skill_root))
+        except Exception:
+            if skill_root.exists():
+                shutil.rmtree(skill_root, ignore_errors=True)
+            shutil.move(str(backup_root), str(skill_root))
+            raise
+    finally:
+        if replacement_root.exists():
+            shutil.rmtree(replacement_root, ignore_errors=True)
+
+    return backup_root
+
+
+def _perform_skill_self_update(
+    *,
+    skill_root: Path,
+    state_dir: Path,
+    tag: str,
+    version: str,
+    repository: str,
+    timeout: float,
+) -> None:
+    with tempfile.TemporaryDirectory(dir=skill_root.parent) as temp_dir:
+        staged_skill_root = _stage_latest_skill_release(
+            tag=tag,
+            version=version,
+            repository=repository,
+            timeout=timeout,
+            temp_dir=Path(temp_dir),
+        )
+        _replace_managed_skill_root(
+            skill_root=skill_root,
+            staged_skill_root=staged_skill_root,
+            state_dir=state_dir,
+        )
+
+
+def _run_auto_update_preflight(argv: list[str], *, skill_root: Path = SKILL_ROOT) -> bool:
+    if not _is_auto_update_enabled() or not _should_run_auto_update(argv):
+        return False
+
+    if not _is_managed_skill_install(skill_root):
+        _emit_update_debug("Skipping auto-update preflight outside the managed install path.")
+        return False
+
+    session_key = _discover_session_key(skill_root)
+    state_dir = _resolve_state_dir()
+    if _session_was_checked(session_key, state_dir=state_dir):
+        _emit_update_debug(f"Session {session_key} already completed AnyCrawler auto-update preflight.")
+        return False
+
+    local_version = _load_skill_version_from(skill_root / "VERSION")
+    repository = _resolve_update_repository()
+    timeout = _resolve_update_timeout()
+
+    try:
+        latest = _fetch_latest_release_tag(timeout=timeout, repository=repository)
+        if latest is None:
+            _mark_session_checked(
+                session_key,
+                state_dir=state_dir,
+                local_version=local_version,
+                latest_version=None,
+                outcome="no-valid-tag",
+            )
+            return False
+
+        latest_tag, latest_version = latest
+        if not _is_newer_version(latest_version, local_version):
+            _mark_session_checked(
+                session_key,
+                state_dir=state_dir,
+                local_version=local_version,
+                latest_version=latest_version,
+                outcome="current",
+            )
+            return False
+
+        _emit_update_debug(
+            f"Updating managed skill install from {local_version} to {latest_version} using {latest_tag}."
+        )
+        _perform_skill_self_update(
+            skill_root=skill_root,
+            state_dir=state_dir,
+            tag=latest_tag,
+            version=latest_version,
+            repository=repository,
+            timeout=timeout,
+        )
+        _mark_session_checked(
+            session_key,
+            state_dir=state_dir,
+            local_version=local_version,
+            latest_version=latest_version,
+            outcome="updated",
+        )
+        return True
+    except Exception as exc:  # noqa: BLE001 - degrade gracefully on update-preflight failures
+        _emit_update_debug(f"Auto-update preflight failed: {exc}")
+        _mark_session_checked(
+            session_key,
+            state_dir=state_dir,
+            local_version=local_version,
+            latest_version=None,
+            outcome="error",
+        )
+        return False
 
 
 def _perform_request(
@@ -310,9 +747,14 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    active_argv = list(sys.argv[1:] if argv is None else argv)
+    if _run_auto_update_preflight(active_argv):
+        os.execv(sys.executable, [sys.executable, str(SCRIPT_FILE), *active_argv])
+        raise RuntimeError("os.execv returned unexpectedly during AnyCrawler self-update re-exec.")
+
     parser = _build_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(active_argv)
     api_key = _resolve_api_key(args.api_key, args.api_key_env)
 
     if args.command == "page":
