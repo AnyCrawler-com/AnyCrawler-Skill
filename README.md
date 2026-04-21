@@ -1,8 +1,8 @@
-[🚀 Register / Sign In](https://app.anycrawler.com/login) | [🧭 Dashboard](https://app.anycrawler.com/overview) | [🔑 Get API Keys](https://app.anycrawler.com/api-keys) | [🌐 Public API](https://api.anycrawler.com)
+﻿[🔌 Register / Sign In](https://app.anycrawler.com/login) | [🛋 Dashboard](https://app.anycrawler.com/overview) | [🌓 Get API Keys](https://app.anycrawler.com/api-keys) | [🕪 Public API](https://api.anycrawler.com)
 
-# AnyCrawler Skill for AI Agents ✨
+# AnyCrawler Skill for AI Agents ✅
 
-This repository provides an AnyCrawler skill that can be installed into compatible AI agent runtimes. The primary skill name is `$anycrawler`.
+This repository provides an AnyCrawler skill that can be installed into compatible AI agent runtimes. The primary skill name is `$anycrawler`. The bundled runtime remains crawl-first, while this repository also documents the stable public search endpoints for integration reference.
 
 ## What this repo contains
 
@@ -85,6 +85,8 @@ python skill/anycrawler/scripts/anycrawler_crawl_api.py screenshot \
   --download-snapshot snapshot.png
 ```
 
+For stable public search endpoint guidance, read `skill/anycrawler/references/public-api.md`.
+
 ## Documentation map
 
 - Agent runtime guide: `skill/anycrawler/SKILL.md`
@@ -92,6 +94,19 @@ python skill/anycrawler/scripts/anycrawler_crawl_api.py screenshot \
 - Maintainer-only notes: `skill/anycrawler/references/maintainer.md`
 - CLI implementation: `skill/anycrawler/scripts/anycrawler_crawl_api.py`
 
+## Stable public endpoints
+
+- `POST /v1/crawl/page`
+- `POST /v1/crawl/screenshot`
+- `POST /v1/search/page`
+- `POST /v1/search/news`
+
+## Notes
+
+- This repository targets the stable public contract only and does not depend on undocumented worker passthrough fields.
+- The bundled CLI remains crawl-first. Search endpoints are documented for stable contract reference, not yet exposed as first-class CLI commands.
+- Keep SSR follow-up parsing generic here. Site-specific extraction logic should live in a separate extraction-focused skill or workflow.
+
 ## Releases
 
-Versioning, compatibility, billing notes, and the release checklist now live in `skill/anycrawler/references/maintainer.md`.
+Versioning, compatibility, billing notes, and the release checklist live in `skill/anycrawler/references/maintainer.md`.
