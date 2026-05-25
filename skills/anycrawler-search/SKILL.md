@@ -7,6 +7,7 @@ description: Use AnyCrawler for public search across web pages, images, news, vi
 
 Use this skill when an agent needs public search results with low context overhead.
 Prefer the bundled CLI in `scripts/anycrawler_search_api.py`.
+The public API uses one search endpoint, `POST /v1/search`; select the result type with the `channel` body field.
 
 ## Preconditions
 
@@ -37,7 +38,9 @@ python scripts/anycrawler_search_api.py news \
 
 ## Request rules
 
-- All channels support `query`, `country`, `language`, `location`, `page`, and `results_per_page`.
+- All CLI subcommands send `POST /v1/search` with `channel` set to the subcommand name.
+- The request body supports `channel`, `query`, `country`, `language`, `location`, `page`, and `results_per_page`.
+- `channel` is required and must be one of `page`, `images`, `news`, `videos`, or `scholar`.
 - `query` is required and must be at most 512 characters.
 - `country`, `language`, and `location` are optional locale hints.
 - `page` must be between `1` and `100`; default is `1`.

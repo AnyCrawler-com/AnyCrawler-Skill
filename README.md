@@ -123,11 +123,7 @@ For the stable public search API contract, read `skills/anycrawler-search/refere
 
 - `POST /v1/crawl/page`
 - `POST /v1/crawl/screenshot`
-- `POST /v1/search/page`
-- `POST /v1/search/images`
-- `POST /v1/search/news`
-- `POST /v1/search/videos`
-- `POST /v1/search/scholar`
+- `POST /v1/search` with `channel` set to `page`, `images`, `news`, `videos`, or `scholar`
 
 ## Notes
 

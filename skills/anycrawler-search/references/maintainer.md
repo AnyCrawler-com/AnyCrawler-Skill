@@ -19,6 +19,9 @@ This file keeps details that are useful for maintainers but unnecessary for most
 
 ## Search channels
 
+All public search channels use `POST /v1/search` with a `channel` field in the
+JSON body:
+
 - `page`
 - `images`
 - `news`
@@ -27,7 +30,7 @@ This file keeps details that are useful for maintainers but unnecessary for most
 
 ## Billing notes
 
-- Every `/v1/search/{channel}` route reserves 20 credits per block of 10 requested results.
+- Every `/v1/search` request reserves 20 credits per block of 10 requested results.
 - Billing formula: `ceil(results_per_page / 10) * 20`.
 - Cache hits do not change pricing.
 

@@ -99,12 +99,11 @@ def _perform_request(
     *,
     api_key: str,
     base_url: str,
-    channel: str,
     payload: dict[str, Any],
     timeout: float,
 ) -> tuple[dict[str, Any], int]:
     request = urllib_request.Request(
-        f"{_normalize_base_url(base_url)}/v1/search/{channel}",
+        f"{_normalize_base_url(base_url)}/v1/search",
         data=json.dumps(payload).encode("utf-8"),
         headers={
             "Accept": "application/json",
@@ -136,6 +135,7 @@ def _perform_request(
 
 def _search_payload(args: argparse.Namespace) -> dict[str, Any]:
     payload: dict[str, Any] = {
+        "channel": args.channel,
         "query": args.query,
         "page": args.page,
         "results_per_page": args.results_per_page,
@@ -205,7 +205,7 @@ def _build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="channel", required=True)
 
     for channel in SEARCH_CHANNELS:
-        channel_parser = subparsers.add_parser(channel, help=f"Call POST /v1/search/{channel}.")
+        channel_parser = subparsers.add_parser(channel, help=f"Call POST /v1/search with channel={channel}.")
         _add_common_arguments(channel_parser)
 
     return parser
@@ -220,7 +220,6 @@ def main(argv: list[str] | None = None) -> int:
     wrapper, status = _perform_request(
         api_key=api_key,
         base_url=args.base_url,
-        channel=args.channel,
         payload=_search_payload(args),
         timeout=args.timeout,
     )

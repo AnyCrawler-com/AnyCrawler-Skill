@@ -26,6 +26,7 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
 
     def test_search_payload_omits_empty_optional_locale_fields(self) -> None:
         args = argparse.Namespace(
+            channel="page",
             query="site reliability engineering",
             country=None,
             language=None,
@@ -39,6 +40,7 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
         self.assertEqual(
             payload,
             {
+                "channel": "page",
                 "query": "site reliability engineering",
                 "page": 1,
                 "results_per_page": 10,
@@ -47,6 +49,7 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
 
     def test_search_payload_includes_locale_fields_when_set(self) -> None:
         args = argparse.Namespace(
+            channel="news",
             query="AnyCrawler",
             country="us",
             language="en",
@@ -57,6 +60,7 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
 
         payload = MODULE._search_payload(args)
 
+        self.assertEqual(payload["channel"], "news")
         self.assertEqual(payload["country"], "us")
         self.assertEqual(payload["language"], "en")
         self.assertEqual(payload["location"], "San Francisco, California, United States")
@@ -117,8 +121,58 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
             self.assertEqual(json.loads(output_path.read_text(encoding="utf-8")), wrapper)
             perform_request.assert_called_once()
             call_kwargs = perform_request.call_args.kwargs
-            self.assertEqual(call_kwargs["channel"], "page")
+            self.assertEqual(call_kwargs["payload"]["channel"], "page")
             self.assertEqual(call_kwargs["payload"]["query"], "example")
+
+    def test_perform_request_posts_to_single_search_endpoint_with_channel_payload(self) -> None:
+        class FakeResponse:
+            headers = {
+                "x-request-id": "req_test",
+                "x-credits-reserved": "20",
+                "x-credits-used": "20",
+                "x-browser-ms-used": "0",
+            }
+
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, *args: object) -> None:
+                return None
+
+            def getcode(self) -> int:
+                return 200
+
+            def read(self) -> bytes:
+                return b'{"ok": true}'
+
+        captured_request = None
+
+        def fake_urlopen(request: object, timeout: float) -> FakeResponse:
+            nonlocal captured_request
+            captured_request = request
+            self.assertEqual(timeout, 12.5)
+            return FakeResponse()
+
+        payload = {
+            "channel": "images",
+            "query": "example",
+            "page": 1,
+            "results_per_page": 10,
+        }
+
+        with mock.patch.object(MODULE.urllib_request, "urlopen", side_effect=fake_urlopen):
+            wrapper, status = MODULE._perform_request(
+                api_key="test-key",
+                base_url="https://api.anycrawler.test/",
+                payload=payload,
+                timeout=12.5,
+            )
+
+        self.assertEqual(status, 200)
+        self.assertEqual(wrapper["data"], {"ok": True})
+        self.assertIsNotNone(captured_request)
+        self.assertEqual(captured_request.full_url, "https://api.anycrawler.test/v1/search")
+        self.assertEqual(json.loads(captured_request.data.decode("utf-8")), payload)
 
     def test_main_rejects_missing_api_key(self) -> None:
         with mock.patch.dict(MODULE.os.environ, {}, clear=True):

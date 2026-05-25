@@ -10,20 +10,24 @@ This reference keeps only the minimum contract an agent needs at runtime.
 - Preferred client: `scripts/anycrawler_search_api.py`
 - Webpage reading and screenshots belong in the separate `anycrawler-read` skill.
 
-## Endpoint selection
+## Endpoint
 
-| Need | Use | Primary collection |
+Use `POST /v1/search` for every public search request. Set the request body's
+`channel` field to choose the search vertical.
+
+| Need | `channel` | Primary collection |
 | --- | --- | --- |
-| General web search | `POST /v1/search/page` | `results.organic` |
-| Image search | `POST /v1/search/images` | `results.images` |
-| News search | `POST /v1/search/news` | `results.news` |
-| Video search | `POST /v1/search/videos` | `results.videos` |
-| Scholar search | `POST /v1/search/scholar` | `results.organic` |
+| General web search | `page` | `results.organic` |
+| Image search | `images` | `results.images` |
+| News search | `news` | `results.news` |
+| Video search | `videos` | `results.videos` |
+| Scholar search | `scholar` | `results.organic` |
 
 ## Search request fields
 
 | Field | Notes |
 | --- | --- |
+| `channel` | Required search channel: `page`, `images`, `news`, `videos`, or `scholar` |
 | `query` | Required search query, maximum 512 characters |
 | `country` | Optional country code mapped to upstream `gl` |
 | `language` | Optional language code mapped to upstream `hl` |
