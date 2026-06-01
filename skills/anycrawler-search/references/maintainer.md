@@ -4,10 +4,10 @@ This file keeps details that are useful for maintainers but unnecessary for most
 
 ## Version and compatibility
 
-- Skill release: `0.2.0`
+- Skill release: `0.2.1`
 - API compatibility: `AnyCrawler Public API v1`
 - Version source of truth: `skills/anycrawler-search/VERSION`
-- Required outbound header for this release: `User-Agent: Anycrawler Search Agent Skill v0.2.0`
+- Required outbound header for this release: `User-Agent: Anycrawler Search Agent Skill v0.2.1`
 - API source of truth: `../app/openapi.json`
 
 ## Auth details
