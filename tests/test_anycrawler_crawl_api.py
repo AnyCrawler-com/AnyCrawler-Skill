@@ -41,11 +41,11 @@ class AnyCrawlerCrawlApiTests(unittest.TestCase):
         self.assertEqual(MODULE.SKILL_VERSION, version)
         self.assertEqual(MODULE.DEFAULT_SKILL_USER_AGENT, f"Anycrawler Agent Skill v{version}")
 
-    def test_page_payload_omits_browser_wait_until_for_fetch(self) -> None:
+    def test_page_payload_omits_render_only_fields_for_fetch(self) -> None:
         args = argparse.Namespace(
             url="https://example.com",
             method="fetch",
-            accept_cache=False,
+            accept_cache=True,
             include_metadata=False,
             include_links=False,
             include_media=False,
@@ -57,6 +57,25 @@ class AnyCrawlerCrawlApiTests(unittest.TestCase):
         payload = MODULE._page_payload(args)
 
         self.assertNotIn("browser_wait_until", payload)
+        self.assertNotIn("accept_cache", payload)
+
+    def test_page_payload_keeps_render_cache_fields_for_render(self) -> None:
+        args = argparse.Namespace(
+            url="https://example.com",
+            method="render",
+            accept_cache=True,
+            include_metadata=False,
+            include_links=False,
+            include_media=False,
+            markdown_variant="markdown",
+            browser_wait_until="networkidle2",
+            user_agent=None,
+        )
+
+        payload = MODULE._page_payload(args)
+
+        self.assertEqual(payload["accept_cache"], True)
+        self.assertEqual(payload["browser_wait_until"], "networkidle2")
 
     def test_main_writes_output_and_returns_nonzero_on_failed_page_request(self) -> None:
         wrapper = {

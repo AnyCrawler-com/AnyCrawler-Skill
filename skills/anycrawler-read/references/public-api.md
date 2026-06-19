@@ -25,7 +25,7 @@ This reference keeps only the minimum contract an agent needs at runtime.
 | --- | --- |
 | `url` | Required target URL |
 | `method` | `fetch` first, `render` for dynamic or incomplete pages |
-| `accept_cache` | Use when freshness is not critical |
+| `accept_cache` | Render-only; do not send for `method=fetch` |
 | `include_metadata` | Enables `results.metadata` |
 | `include_links` | Enables `results.links` |
 | `include_media` | Enables `results.media` |

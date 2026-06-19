@@ -593,12 +593,13 @@ def _page_payload(args: argparse.Namespace) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "url": args.url,
         "method": args.method,
-        "accept_cache": args.accept_cache,
         "include_metadata": args.include_metadata,
         "include_links": args.include_links,
         "include_media": args.include_media,
         "markdown_variant": args.markdown_variant,
     }
+    if args.method == "render":
+        payload["accept_cache"] = args.accept_cache
     if args.method == "render" and args.browser_wait_until is not None:
         payload["browser_wait_until"] = args.browser_wait_until
     if args.user_agent is not None:
@@ -708,7 +709,7 @@ def _build_parser() -> argparse.ArgumentParser:
         default="fetch",
         help="Crawl method. Default: fetch.",
     )
-    page.add_argument("--accept-cache", action="store_true", help="Set accept_cache=true.")
+    page.add_argument("--accept-cache", action="store_true", help="Set accept_cache=true for render requests.")
     page.add_argument("--include-metadata", action="store_true", help="Set include_metadata=true.")
     page.add_argument("--include-links", action="store_true", help="Set include_links=true.")
     page.add_argument("--include-media", action="store_true", help="Set include_media=true.")

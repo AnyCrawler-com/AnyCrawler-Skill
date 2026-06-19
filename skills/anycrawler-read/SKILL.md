@@ -39,7 +39,8 @@ python scripts/anycrawler_crawl_api.py screenshot \
 
 ## Request rules
 
-- `page` supports `url`, `method`, `accept_cache`, `include_metadata`, `include_links`, `include_media`, `markdown_variant`, and `browser_wait_until`.
+- `page` supports `url`, `method`, `include_metadata`, `include_links`, `include_media`, `markdown_variant`, and `browser_wait_until`.
+- `accept_cache` applies only when `method=render`; do not send or recommend it for `method=fetch`.
 - `browser_wait_until` applies only when `method=render`.
 - `include_metadata`, `include_links`, and `include_media` only affect the response when explicitly enabled.
 - `markdown_variant=readability` still returns content in `results.markdown`.
