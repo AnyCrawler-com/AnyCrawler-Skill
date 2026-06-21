@@ -5,7 +5,7 @@ This reference keeps only the minimum contract an agent needs at runtime.
 ## Base setup
 
 - Base URL: `https://api.anycrawler.com`
-- API key env var: `ANYCRAWLER_API_KEY`
+- API key env var: `ANYCRAWLER_API_KEY` for render and screenshot only
 - Optional base URL env var: `ANYCRAWLER_BASE_URL`
 - Preferred client: `scripts/anycrawler_crawl_api.py`
 - Search workflows belong in the separate `anycrawler-search` skill.
@@ -14,7 +14,8 @@ This reference keeps only the minimum contract an agent needs at runtime.
 
 | Need | Use | Notes |
 | --- | --- | --- |
-| Read or extract webpage content | `POST /v1/crawl/page` | Default to `fetch` first and escalate to `render` when content is incomplete or clearly dynamic. |
+| Read or extract webpage content with fetch | `GET /free/v1/crawl?url={url}` | Default path. Does not require an API key. |
+| Read or extract dynamic webpage content | `POST /v1/crawl/page` with `method=render` | Requires an API key. Use when free fetch output is incomplete or clearly dynamic. |
 | Capture a screenshot | `POST /v1/crawl/screenshot` | Returns screenshot storage metadata only. |
 
 ## Crawl request fields
@@ -23,13 +24,13 @@ This reference keeps only the minimum contract an agent needs at runtime.
 
 | Field | Notes |
 | --- | --- |
-| `url` | Required target URL |
-| `method` | `fetch` first, `render` for dynamic or incomplete pages |
+| `url` | Required target URL; the only field sent for `method=fetch` |
+| `method` | `fetch` uses the free endpoint, `render` uses the authenticated public API |
 | `accept_cache` | Render-only; do not send for `method=fetch` |
-| `include_metadata` | Enables `results.metadata` |
-| `include_links` | Enables `results.links` |
-| `include_media` | Enables `results.media` |
-| `markdown_variant` | `markdown` or `readability`; output stays in `results.markdown` |
+| `include_metadata` | Render-only; enables `results.metadata` |
+| `include_links` | Render-only; enables `results.links` |
+| `include_media` | Render-only; enables `results.media` |
+| `markdown_variant` | Render-only; `markdown` or `readability`; output stays in `results.markdown` |
 | `browser_wait_until` | Only for `method=render` |
 | `user_agent` | Paid-plan-only field when explicitly set |
 
@@ -68,7 +69,7 @@ This reference keeps only the minimum contract an agent needs at runtime.
 | Status | Handling |
 | --- | --- |
 | `400` | Invalid request; fix input before retry |
-| `401` | Invalid or missing API key |
+| `401` | Invalid or missing API key for render or screenshot |
 | `402` | Account capacity issue; do not blind retry |
 | `403` | Usually account or paid-plan field issue; remove ineligible fields or fix account state |
 | `409` | Retryable after backoff |

@@ -10,9 +10,10 @@ Prefer the bundled CLI in `scripts/anycrawler_crawl_api.py`. When the skill is i
 
 ## Preconditions
 
-1. `ANYCRAWLER_API_KEY` must be available.
-2. `ANYCRAWLER_BASE_URL` is optional; default is `https://api.anycrawler.com`.
-3. Use documented snake_case fields only.
+1. `page --method fetch` uses the free fetch endpoint and does not require an API key.
+2. `page --method render` and `screenshot` require `ANYCRAWLER_API_KEY`.
+3. `ANYCRAWLER_BASE_URL` is optional; default is `https://api.anycrawler.com`.
+4. Use documented snake_case fields only.
 
 ## Choose the endpoint
 
@@ -21,7 +22,7 @@ Prefer the bundled CLI in `scripts/anycrawler_crawl_api.py`. When the skill is i
 
 ## Choose the method
 
-- Start with `page --method fetch`.
+- Start with `page --method fetch`; it calls `GET /free/v1/crawl?url=...` without authentication.
 - Switch to `page --method render` when fetched output is incomplete or the page depends on client-side rendering.
 - If async content still has not settled, add `--browser-wait-until networkidle2` with `render`.
 
@@ -39,10 +40,11 @@ python scripts/anycrawler_crawl_api.py screenshot \
 
 ## Request rules
 
-- `page` supports `url`, `method`, `include_metadata`, `include_links`, `include_media`, `markdown_variant`, and `browser_wait_until`.
+- `page --method fetch` sends only `url` to the free endpoint.
+- `page --method render` supports `url`, `method`, `include_metadata`, `include_links`, `include_media`, `markdown_variant`, and `browser_wait_until`.
 - `accept_cache` applies only when `method=render`; do not send or recommend it for `method=fetch`.
 - `browser_wait_until` applies only when `method=render`.
-- `include_metadata`, `include_links`, and `include_media` only affect the response when explicitly enabled.
+- `include_metadata`, `include_links`, and `include_media` only affect authenticated render responses when explicitly enabled.
 - `markdown_variant=readability` still returns content in `results.markdown`.
 - Do not rely on undocumented passthrough fields.
 

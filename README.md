@@ -47,7 +47,8 @@ On the first managed-install invocation in each agent session, the bundled CLI c
 
 ## Quick setup
 
-Before using AnyCrawler, complete the following setup:
+The default `$anycrawler-read` fetch path does not require setup or an API key.
+Before using authenticated render, screenshot, or search requests, complete the following setup:
 
 1. [Register or sign in to AnyCrawler](https://app.anycrawler.com/login)
 2. [Create or copy an API key from the dashboard](https://app.anycrawler.com/api-keys)
@@ -90,7 +91,7 @@ From the repository root, you can also run the bundled CLI directly:
 ```bash
 python skills/anycrawler-read/scripts/anycrawler_crawl_api.py page \
   --url https://example.com \
-  --include-metadata
+  --write-markdown out.md
 
 python skills/anycrawler-read/scripts/anycrawler_crawl_api.py screenshot \
   --url https://example.com \
@@ -121,6 +122,7 @@ For the stable public search API contract, read `skills/anycrawler-search/refere
 
 ## Stable public endpoints
 
+- `GET /free/v1/crawl?url={url}` for default unauthenticated fetch
 - `POST /v1/crawl/page`
 - `POST /v1/crawl/screenshot`
 - `POST /v1/search` with `channel` set to `page`, `images`, `news`, `videos`, or `scholar`

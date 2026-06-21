@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib import error as urllib_error
+from urllib import parse as urllib_parse
 from urllib import request as urllib_request
 
 
@@ -589,6 +590,41 @@ def _perform_request(
         raise SystemExit(message) from exc
 
 
+def _perform_free_fetch_request(
+    *,
+    base_url: str,
+    target_url: str,
+    timeout: float,
+) -> tuple[dict[str, Any], int]:
+    query = urllib_parse.urlencode({"url": target_url})
+    request = urllib_request.Request(
+        f"{_normalize_base_url(base_url)}/free/v1/crawl?{query}",
+        headers={
+            "Accept": "application/json",
+            "User-Agent": DEFAULT_SKILL_USER_AGENT,
+        },
+        method="GET",
+    )
+
+    try:
+        with urllib_request.urlopen(request, timeout=timeout) as response:
+            status = response.getcode()
+            body = response.read().decode("utf-8")
+            return {
+                "data": _parse_json(body),
+                "meta": _build_meta(status, response.headers),
+            }, status
+    except urllib_error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        return {
+            "data": _parse_json(body),
+            "meta": _build_meta(exc.code, exc.headers),
+        }, exc.code
+    except urllib_error.URLError as exc:
+        message = f"AnyCrawler free fetch request failed before receiving an HTTP response: {exc.reason}"
+        raise SystemExit(message) from exc
+
+
 def _page_payload(args: argparse.Namespace) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "url": args.url,
@@ -691,7 +727,7 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Call AnyCrawler public crawl APIs with the stable documented contract.",
+        description="Call AnyCrawler crawl APIs with the stable documented contract.",
     )
     parser.add_argument(
         "--version",
@@ -700,7 +736,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    page = subparsers.add_parser("page", help="Call POST /v1/crawl/page.")
+    page = subparsers.add_parser("page", help="Call free fetch or POST /v1/crawl/page for render.")
     _add_common_arguments(page)
     page.add_argument("--url", required=True, help="Target URL.")
     page.add_argument(
@@ -756,9 +792,15 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = _build_parser()
     args = parser.parse_args(active_argv)
-    api_key = _resolve_api_key(args.api_key, args.api_key_env)
 
-    if args.command == "page":
+    if args.command == "page" and args.method == "fetch":
+        wrapper, status = _perform_free_fetch_request(
+            base_url=args.base_url,
+            target_url=args.url,
+            timeout=args.timeout,
+        )
+    elif args.command == "page":
+        api_key = _resolve_api_key(args.api_key, args.api_key_env)
         wrapper, status = _perform_request(
             api_key=api_key,
             base_url=args.base_url,
@@ -767,6 +809,7 @@ def main(argv: list[str] | None = None) -> int:
             timeout=args.timeout,
         )
     else:
+        api_key = _resolve_api_key(args.api_key, args.api_key_env)
         wrapper, status = _perform_request(
             api_key=api_key,
             base_url=args.base_url,

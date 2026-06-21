@@ -77,19 +77,18 @@ class AnyCrawlerCrawlApiTests(unittest.TestCase):
         self.assertEqual(payload["accept_cache"], True)
         self.assertEqual(payload["browser_wait_until"], "networkidle2")
 
-    def test_main_writes_output_and_returns_nonzero_on_failed_page_request(self) -> None:
+    def test_main_writes_output_and_returns_nonzero_on_failed_free_fetch_request(self) -> None:
         wrapper = {
             "data": {
                 "ok": False,
-                "error": "INVALID_REQUEST",
-                "retryable": False,
+                "status_code": 403,
+                "error": {
+                    "code": "ROBOTS_DISALLOWED",
+                    "message": "Crawling is disallowed by robots.txt for this URL.",
+                },
             },
             "meta": {
-                "status": 400,
-                "requestId": "req_test",
-                "creditsReserved": 0,
-                "creditsUsed": 0,
-                "browserMsUsed": 0,
+                "status": 403,
             },
         }
 
@@ -100,8 +99,6 @@ class AnyCrawlerCrawlApiTests(unittest.TestCase):
                 "page",
                 "--url",
                 "https://example.com",
-                "--api-key",
-                "test-key",
                 "--output",
                 str(output_path),
                 "--write-markdown",
@@ -110,13 +107,79 @@ class AnyCrawlerCrawlApiTests(unittest.TestCase):
             ]
 
             with mock.patch.object(MODULE, "_run_auto_update_preflight", return_value=False):
-                with mock.patch.object(MODULE, "_perform_request", return_value=(wrapper, 400)):
+                with mock.patch.object(MODULE, "_perform_free_fetch_request", return_value=(wrapper, 403)):
                     exit_code = MODULE.main(argv)
 
             self.assertEqual(exit_code, 1)
             self.assertTrue(output_path.exists())
             self.assertFalse(markdown_path.exists())
             self.assertEqual(json.loads(output_path.read_text(encoding="utf-8")), wrapper)
+
+    def test_free_fetch_request_uses_free_endpoint_without_authorization(self) -> None:
+        class FakeResponse:
+            headers = {
+                "x-edge-cache": "MISS",
+            }
+
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, *args: object) -> None:
+                return None
+
+            def getcode(self) -> int:
+                return 200
+
+            def read(self) -> bytes:
+                return b'{"ok": true, "results": {"markdown": "# Example"}}'
+
+        captured_request = None
+
+        def fake_urlopen(request: object, timeout: float) -> FakeResponse:
+            nonlocal captured_request
+            captured_request = request
+            self.assertEqual(timeout, 12.5)
+            return FakeResponse()
+
+        with mock.patch.object(MODULE.urllib_request, "urlopen", side_effect=fake_urlopen):
+            wrapper, status = MODULE._perform_free_fetch_request(
+                base_url="https://api.anycrawler.test/",
+                target_url="https://example.com/path?a=1&b=2",
+                timeout=12.5,
+            )
+
+        self.assertEqual(status, 200)
+        self.assertEqual(wrapper["data"], {"ok": True, "results": {"markdown": "# Example"}})
+        self.assertIsNotNone(captured_request)
+        self.assertEqual(captured_request.get_method(), "GET")
+        self.assertEqual(
+            captured_request.full_url,
+            "https://api.anycrawler.test/free/v1/crawl?url=https%3A%2F%2Fexample.com%2Fpath%3Fa%3D1%26b%3D2",
+        )
+        self.assertIsNone(captured_request.get_header("Authorization"))
+
+    def test_main_fetch_uses_free_endpoint_without_api_key(self) -> None:
+        wrapper = {
+            "data": {
+                "ok": True,
+                "results": {
+                    "markdown": "# Example",
+                },
+            },
+            "meta": {
+                "status": 200,
+            },
+        }
+
+        with mock.patch.dict(MODULE.os.environ, {}, clear=True):
+            with mock.patch.object(MODULE, "_run_auto_update_preflight", return_value=False):
+                with mock.patch.object(MODULE, "_perform_free_fetch_request", return_value=(wrapper, 200)) as free_fetch:
+                    with mock.patch.object(MODULE, "_perform_request") as public_request:
+                        exit_code = MODULE.main(["page", "--url", "https://example.com", "--silent"])
+
+        self.assertEqual(exit_code, 0)
+        free_fetch.assert_called_once()
+        public_request.assert_not_called()
 
     def test_parser_supports_version_flag(self) -> None:
         parser = MODULE._build_parser()
@@ -268,6 +331,14 @@ class AnyCrawlerCrawlApiTests(unittest.TestCase):
             self.assertFalse(result)
             state = json.loads((state_dir / MODULE.SESSION_STATE_FILE_NAME).read_text(encoding="utf-8"))
             self.assertEqual(state["sessions"]["session-3"]["outcome"], "error")
+
+    def test_main_rejects_missing_api_key_for_render(self) -> None:
+        with mock.patch.dict(MODULE.os.environ, {}, clear=True):
+            with mock.patch.object(MODULE, "_run_auto_update_preflight", return_value=False):
+                with self.assertRaises(SystemExit) as exc:
+                    MODULE.main(["page", "--method", "render", "--url", "https://example.com", "--silent"])
+
+        self.assertIn("Missing API key", str(exc.exception))
 
     def test_main_reexecs_after_successful_auto_update(self) -> None:
         argv = ["page", "--url", "https://example.com", "--api-key", "test-key"]
