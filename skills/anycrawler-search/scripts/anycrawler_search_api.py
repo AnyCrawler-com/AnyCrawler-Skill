@@ -13,6 +13,8 @@ from urllib import request as urllib_request
 
 DEFAULT_BASE_URL = "https://api.anycrawler.com"
 SEARCH_CHANNELS = ("page", "images", "news", "videos", "scholar")
+SEARCH_MAX_QUERY_LENGTH = 512
+SEARCH_MAX_COUNTRY_LENGTH = 128
 SCRIPT_FILE = Path(__file__).resolve()
 SKILL_ROOT = SCRIPT_FILE.parents[1]
 VERSION_FILE = SKILL_ROOT / "VERSION"
@@ -72,6 +74,18 @@ def _parse_json(text: str) -> Any:
 
 def _normalize_base_url(base_url: str) -> str:
     return base_url.rstrip("/")
+
+
+def _bounded_text(field: str, maximum: int):
+    def parse(value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise argparse.ArgumentTypeError(f"{field} must be non-empty.")
+        if len(normalized) > maximum:
+            raise argparse.ArgumentTypeError(f"{field} must be {maximum} characters or fewer.")
+        return normalized
+
+    return parse
 
 
 def _resolve_api_key(explicit_key: str | None, env_name: str) -> str:
@@ -142,10 +156,6 @@ def _search_payload(args: argparse.Namespace) -> dict[str, Any]:
     }
     if args.country is not None:
         payload["country"] = args.country
-    if args.language is not None:
-        payload["language"] = args.language
-    if args.location is not None:
-        payload["location"] = args.location
     return payload
 
 
@@ -185,10 +195,17 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="Do not print the JSON wrapper to stdout.",
     )
-    parser.add_argument("--query", required=True, help="Search query string.")
-    parser.add_argument("--country", help="Optional country code mapped to upstream gl.")
-    parser.add_argument("--language", help="Optional language code mapped to upstream hl.")
-    parser.add_argument("--location", help="Optional precise location string forwarded upstream.")
+    parser.add_argument(
+        "--query",
+        required=True,
+        type=_bounded_text("query", SEARCH_MAX_QUERY_LENGTH),
+        help="Non-empty search query, maximum 512 characters.",
+    )
+    parser.add_argument(
+        "--country",
+        type=_bounded_text("country", SEARCH_MAX_COUNTRY_LENGTH),
+        help="Optional country string mapped to upstream gl, maximum 128 characters.",
+    )
     parser.add_argument("--page", type=int, default=1, choices=range(1, 101), metavar="1-100")
     parser.add_argument("--results-per-page", type=int, default=10, choices=range(1, 101), metavar="1-100")
 

@@ -4,11 +4,11 @@ This file keeps details that are useful for maintainers but unnecessary for most
 
 ## Version and compatibility
 
-- Skill release: `0.2.1`
+- Skill release: `0.2.3`
 - API compatibility: `AnyCrawler Public API v1`
 - Version source of truth: `skills/anycrawler-search/VERSION`
-- Required outbound header for this release: `User-Agent: Anycrawler Search Agent Skill v0.2.1`
-- API source of truth: `../app/openapi.json`
+- Required outbound header for this release: `User-Agent: Anycrawler Search Agent Skill v0.2.3`
+- API source of truth: `app/openapi.json` and `app/src/lib/gateway.ts` in the AnyCrawler application repository
 
 ## Auth details
 
@@ -32,7 +32,6 @@ JSON body:
 
 - Every `/v1/search` request reserves 20 credits per block of 10 requested results.
 - Billing formula: `ceil(results_per_page / 10) * 20`.
-- Cache hits do not change pricing.
 
 ## Gateway headers mirrored by the CLI
 
@@ -59,7 +58,7 @@ CLI wrapper shape:
 
 1. Update `skills/anycrawler-search/VERSION`
 2. Run `python -m unittest tests/test_anycrawler_search_api.py`
-3. Verify docs still match `../app/openapi.json`
+3. Verify docs still match `app/openapi.json` and `app/src/lib/gateway.ts` in the AnyCrawler application repository
 4. Verify docs still match the current `User-Agent` and API compatibility statement
 
 ## Repository pointers

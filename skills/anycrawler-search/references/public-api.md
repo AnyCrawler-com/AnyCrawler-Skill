@@ -28,18 +28,16 @@ Use `POST /v1/search` for every public search request. Set the request body's
 | Field | Notes |
 | --- | --- |
 | `channel` | Required search channel: `page`, `images`, `news`, `videos`, or `scholar` |
-| `query` | Required search query, maximum 512 characters |
-| `country` | Optional country code mapped to upstream `gl` |
-| `language` | Optional language code mapped to upstream `hl` |
-| `location` | Optional precise location string forwarded upstream |
+| `query` | Required non-empty search query, maximum 512 characters after trimming |
+| `country` | Optional string or `null`, maximum 128 characters after trimming; mapped to upstream `gl` |
 | `page` | Optional integer from `1` to `100`; default `1` |
 | `results_per_page` | Optional integer from `1` to `100`; default `10` |
 
-## Billing and caching
+Unknown request fields are rejected with `400 INVALID_REQUEST`.
+
+## Billing
 
 - Billing formula: `ceil(results_per_page / 10) * 20` credits.
-- Requests are cached for 1 hour by `channel`, `query`, `page`, locale fields, and `results_per_page`.
-- Search cache hits do not change pricing.
 
 ## Response fields to care about
 
@@ -47,11 +45,8 @@ Use `POST /v1/search` for every public search request. Set the request body's
 
 - `data.ok`
 - `data.query`
-- `data.cache_timestamp`
 - `data.credits_used`
 - `data.status_code`
-- `data.title`
-- `data.final_url`
 - `data.error_code`
 - `data.error_message`
 - `data.retryable`
@@ -78,7 +73,7 @@ Use `POST /v1/search` for every public search request. Set the request body's
 | `402` | Account capacity issue; do not blind retry |
 | `403` | Account exists but is not active |
 | `409` | Retryable after backoff |
-| `413` | Request body exceeds the public gateway size limit |
+| `413` | `PAYLOAD_TOO_LARGE`; request body exceeds the public gateway size limit |
 | `429` | Retryable after backoff; also check quota, rate limiting, or upstream limits |
 | `502` | Retryable after backoff |
 | `503` | Database or search provider is not configured |
@@ -88,7 +83,7 @@ Use `POST /v1/search` for every public search request. Set the request body's
 
 1. Record `meta.requestId` on every failure.
 2. Check `data.retryable` before retrying.
-3. Prefer changing the request for `400`, `401`, `402`, `403`, and `413` responses.
+3. Prefer changing the request for `400`, `401`, `402`, `403`, and `413 PAYLOAD_TOO_LARGE` responses.
 4. Back off before retrying `409`, `429`, `502`, and `504`.
 
 Advanced release, billing, headers, and full gateway notes live in `maintainer.md`.

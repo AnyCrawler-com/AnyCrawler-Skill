@@ -10,8 +10,8 @@ Prefer the bundled CLI in `scripts/anycrawler_crawl_api.py`. When the skill is i
 
 ## Preconditions
 
-1. `page --method fetch` uses the free fetch endpoint and does not require an API key.
-2. `page --method render` and `screenshot` require `ANYCRAWLER_API_KEY`.
+1. `page --method fetch` uses the free fetch endpoint by default and does not require an API key.
+2. `page --method fetch --authenticated-fetch`, `page --method render`, and `screenshot` require `ANYCRAWLER_API_KEY`.
 3. `ANYCRAWLER_BASE_URL` is optional; default is `https://api.anycrawler.com`.
 4. Use documented snake_case fields only.
 
@@ -23,6 +23,7 @@ Prefer the bundled CLI in `scripts/anycrawler_crawl_api.py`. When the skill is i
 ## Choose the method
 
 - Start with `page --method fetch`; it calls `GET /free/v1/crawl?url=...` without authentication.
+- Use `page --method fetch --authenticated-fetch` when the request must use `POST /v1/crawl/page` or needs authenticated response options.
 - Switch to `page --method render` when fetched output is incomplete or the page depends on client-side rendering.
 - If async content still has not settled, add `--browser-wait-until networkidle2` with `render`.
 
@@ -40,11 +41,11 @@ python scripts/anycrawler_crawl_api.py screenshot \
 
 ## Request rules
 
-- `page --method fetch` sends only `url` to the free endpoint.
-- `page --method render` supports `url`, `method`, `include_metadata`, `include_links`, `include_media`, `markdown_variant`, and `browser_wait_until`.
+- `page --method fetch` sends only `url` to the free endpoint unless `--authenticated-fetch` is set.
+- Authenticated `page` requests support `url`, `method`, `accept_cache`, `include_metadata`, `include_links`, `include_media`, `markdown_variant`, `browser_wait_until`, and `user_agent`.
 - `accept_cache` applies only when `method=render`; do not send or recommend it for `method=fetch`.
 - `browser_wait_until` applies only when `method=render`.
-- `include_metadata`, `include_links`, and `include_media` only affect authenticated render responses when explicitly enabled.
+- `include_metadata`, `include_links`, `include_media`, and `markdown_variant` apply to authenticated fetch and render requests.
 - `markdown_variant=readability` still returns content in `results.markdown`.
 - Do not rely on undocumented passthrough fields.
 
@@ -60,14 +61,16 @@ Inspect both `data` and `meta`.
 - Failure path:
   - Record `meta.requestId`.
   - The CLI may mirror extra `meta` fields, but agents usually only need `requestId` for troubleshooting.
-  - Check `data.error` and `data.retryable`.
+  - For authenticated page or screenshot failures, check `data.error_code`, `data.error_message`, and `data.retryable`.
+  - For free fetch failures, check `data.error.code` and `data.error.message`.
 
 ## Retry rules
 
-- Do not blindly retry `400`, `401`, `402`, or most `403` responses.
+- Do not blindly retry `400`, `401`, `402`, `413`, or most `403` responses.
 - Treat `403` from paid-plan-only fields as a request-shape issue; remove those fields before retrying.
 - `409`, `429`, `502`, and `504` are the main backoff-and-retry cases.
 - For `429`, treat it as quota, rate-limit, or concurrency pressure first; back off before retrying.
+- For `503`, check database or worker configuration before retrying.
 
 ## References
 

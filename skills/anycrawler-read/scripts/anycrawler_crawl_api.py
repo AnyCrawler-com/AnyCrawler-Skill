@@ -736,7 +736,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    page = subparsers.add_parser("page", help="Call free fetch or POST /v1/crawl/page for render.")
+    page = subparsers.add_parser("page", help="Call free fetch or authenticated POST /v1/crawl/page.")
     _add_common_arguments(page)
     page.add_argument("--url", required=True, help="Target URL.")
     page.add_argument(
@@ -744,6 +744,11 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=("render", "fetch"),
         default="fetch",
         help="Crawl method. Default: fetch.",
+    )
+    page.add_argument(
+        "--authenticated-fetch",
+        action="store_true",
+        help="With --method fetch, use authenticated POST /v1/crawl/page instead of the free endpoint.",
     )
     page.add_argument("--accept-cache", action="store_true", help="Set accept_cache=true for render requests.")
     page.add_argument("--include-metadata", action="store_true", help="Set include_metadata=true.")
@@ -793,7 +798,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(active_argv)
 
-    if args.command == "page" and args.method == "fetch":
+    if args.command == "page" and args.authenticated_fetch and args.method != "fetch":
+        parser.error("--authenticated-fetch requires --method fetch.")
+
+    if args.command == "page" and args.method == "fetch" and not args.authenticated_fetch:
         wrapper, status = _perform_free_fetch_request(
             base_url=args.base_url,
             target_url=args.url,

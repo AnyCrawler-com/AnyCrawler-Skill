@@ -18,6 +18,21 @@ SPEC.loader.exec_module(MODULE)
 
 
 class AnyCrawlerSearchApiTests(unittest.TestCase):
+    def test_search_docs_exclude_removed_fields_and_cache_discussion(self) -> None:
+        search_root = MODULE.SKILL_ROOT
+        checked_paths = (
+            search_root / "SKILL.md",
+            search_root / "references" / "public-api.md",
+            search_root / "references" / "maintainer.md",
+        )
+
+        for path in checked_paths:
+            content = path.read_text(encoding="utf-8").lower()
+            with self.subTest(path=path):
+                self.assertNotIn("cache", content)
+                self.assertNotIn("`language`", content)
+                self.assertNotIn("`location`", content)
+
     def test_user_agent_uses_version_file(self) -> None:
         version = (MODULE.SKILL_ROOT / "VERSION").read_text(encoding="utf-8").strip()
 
@@ -29,8 +44,6 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
             channel="page",
             query="site reliability engineering",
             country=None,
-            language=None,
-            location=None,
             page=1,
             results_per_page=10,
         )
@@ -47,13 +60,11 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
             },
         )
 
-    def test_search_payload_includes_locale_fields_when_set(self) -> None:
+    def test_search_payload_includes_only_supported_optional_country(self) -> None:
         args = argparse.Namespace(
             channel="news",
             query="AnyCrawler",
             country="us",
-            language="en",
-            location="San Francisco, California, United States",
             page=2,
             results_per_page=20,
         )
@@ -62,10 +73,12 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
 
         self.assertEqual(payload["channel"], "news")
         self.assertEqual(payload["country"], "us")
-        self.assertEqual(payload["language"], "en")
-        self.assertEqual(payload["location"], "San Francisco, California, United States")
         self.assertEqual(payload["page"], 2)
         self.assertEqual(payload["results_per_page"], 20)
+        self.assertEqual(
+            set(payload),
+            {"channel", "query", "country", "page", "results_per_page"},
+        )
 
     def test_parser_supports_all_search_channels(self) -> None:
         parser = MODULE._build_parser()
@@ -74,6 +87,33 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
             args = parser.parse_args([channel, "--query", "example"])
             self.assertEqual(args.channel, channel)
             self.assertEqual(args.query, "example")
+
+    def test_parser_rejects_removed_search_fields(self) -> None:
+        parser = MODULE._build_parser()
+
+        for field in ("--language", "--location"):
+            with self.subTest(field=field), self.assertRaises(SystemExit) as exc:
+                parser.parse_args(["page", "--query", "example", field, "value"])
+
+            self.assertEqual(exc.exception.code, 2)
+
+    def test_parser_enforces_search_text_contract(self) -> None:
+        parser = MODULE._build_parser()
+
+        invalid_argv = (
+            ["page", "--query", "   "],
+            ["page", "--query", "x" * 513],
+            ["page", "--query", "example", "--country", "x" * 129],
+        )
+        for argv in invalid_argv:
+            with self.subTest(argv=argv), self.assertRaises(SystemExit) as exc:
+                parser.parse_args(argv)
+
+            self.assertEqual(exc.exception.code, 2)
+
+        args = parser.parse_args(["page", "--query", "  example  ", "--country", " us "])
+        self.assertEqual(args.query, "example")
+        self.assertEqual(args.country, "us")
 
     def test_parser_supports_version_flag(self) -> None:
         parser = MODULE._build_parser()

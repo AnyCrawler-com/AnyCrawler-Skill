@@ -1,4 +1,4 @@
 interface:
   display_name: "AnyCrawler Search"
   short_description: "Search web, images, news, videos, scholar"
-  default_prompt: "Use $anycrawler-search for public search; choose page, images, news, videos, or scholar, pass query and optional locale fields, and inspect the normalized result collections."
+  default_prompt: "Use $anycrawler-search for public search; choose page, images, news, videos, or scholar, pass a query and optional country, and inspect the normalized result collections."

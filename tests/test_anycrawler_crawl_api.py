@@ -77,6 +77,26 @@ class AnyCrawlerCrawlApiTests(unittest.TestCase):
         self.assertEqual(payload["accept_cache"], True)
         self.assertEqual(payload["browser_wait_until"], "networkidle2")
 
+    def test_screenshot_payload_uses_only_public_snake_case_fields(self) -> None:
+        args = argparse.Namespace(
+            url="https://example.com",
+            full_page=False,
+            aspect_ratio="9:16",
+            user_agent="AnyCrawler Test",
+        )
+
+        payload = MODULE._screenshot_payload(args)
+
+        self.assertEqual(
+            payload,
+            {
+                "url": "https://example.com",
+                "full_page": False,
+                "aspect_ratio": "9:16",
+                "user_agent": "AnyCrawler Test",
+            },
+        )
+
     def test_main_writes_output_and_returns_nonzero_on_failed_free_fetch_request(self) -> None:
         wrapper = {
             "data": {
@@ -180,6 +200,82 @@ class AnyCrawlerCrawlApiTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         free_fetch.assert_called_once()
         public_request.assert_not_called()
+
+    def test_main_authenticated_fetch_uses_public_endpoint(self) -> None:
+        wrapper = {
+            "data": {"ok": True, "results": {"markdown": "# Example"}},
+            "meta": {"status": 200},
+        }
+        argv = [
+            "page",
+            "--url",
+            "https://example.com",
+            "--method",
+            "fetch",
+            "--authenticated-fetch",
+            "--include-links",
+            "--api-key",
+            "test-key",
+            "--silent",
+        ]
+
+        with mock.patch.object(MODULE, "_run_auto_update_preflight", return_value=False):
+            with mock.patch.object(MODULE, "_perform_free_fetch_request") as free_fetch:
+                with mock.patch.object(MODULE, "_perform_request", return_value=(wrapper, 200)) as public_request:
+                    exit_code = MODULE.main(argv)
+
+        self.assertEqual(exit_code, 0)
+        free_fetch.assert_not_called()
+        public_request.assert_called_once()
+        call_kwargs = public_request.call_args.kwargs
+        self.assertEqual(call_kwargs["pathname"], "/v1/crawl/page")
+        self.assertEqual(call_kwargs["payload"]["method"], "fetch")
+        self.assertEqual(call_kwargs["payload"]["include_links"], True)
+        self.assertNotIn("accept_cache", call_kwargs["payload"])
+        self.assertNotIn("browser_wait_until", call_kwargs["payload"])
+
+    def test_authenticated_fetch_flag_rejects_render_method(self) -> None:
+        with mock.patch.object(MODULE, "_run_auto_update_preflight", return_value=False):
+            with self.assertRaises(SystemExit) as exc:
+                MODULE.main(
+                    [
+                        "page",
+                        "--url",
+                        "https://example.com",
+                        "--method",
+                        "render",
+                        "--authenticated-fetch",
+                        "--silent",
+                    ]
+                )
+
+        self.assertEqual(exc.exception.code, 2)
+
+    def test_main_screenshot_uses_public_screenshot_endpoint(self) -> None:
+        wrapper = {
+            "data": {"ok": True, "results": {"snapshot_url": "https://example.com/snapshot.png"}},
+            "meta": {"status": 200},
+        }
+
+        with mock.patch.object(MODULE, "_run_auto_update_preflight", return_value=False):
+            with mock.patch.object(MODULE, "_perform_request", return_value=(wrapper, 200)) as public_request:
+                exit_code = MODULE.main(
+                    [
+                        "screenshot",
+                        "--url",
+                        "https://example.com",
+                        "--no-full-page",
+                        "--api-key",
+                        "test-key",
+                        "--silent",
+                    ]
+                )
+
+        self.assertEqual(exit_code, 0)
+        public_request.assert_called_once()
+        call_kwargs = public_request.call_args.kwargs
+        self.assertEqual(call_kwargs["pathname"], "/v1/crawl/screenshot")
+        self.assertEqual(call_kwargs["payload"], {"url": "https://example.com", "full_page": False})
 
     def test_parser_supports_version_flag(self) -> None:
         parser = MODULE._build_parser()

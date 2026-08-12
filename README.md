@@ -43,7 +43,7 @@ Copy-Item -Recurse -Force ".\AnyCrawler-Skill\skills\anycrawler-search" "$HOME\.
 
 After installation, start a new AI agent session so the new skill can be discovered again.
 
-On the first managed-install invocation in each agent session, the bundled CLI checks the latest tagged release from `AnyCrawler-com/AnyCrawler-Skill`. If the installed skill is behind, it upgrades itself before running the crawl command. Direct repo checkouts skip self-mutation.
+On the first managed-install invocation of `$anycrawler-read` in each agent session, its bundled CLI checks the latest tagged release from `AnyCrawler-com/AnyCrawler-Skill`. If the installed skill is behind, it upgrades itself before running the crawl command. Direct repo checkouts and the search CLI skip self-mutation.
 
 ## Quick setup
 
@@ -102,8 +102,7 @@ python skills/anycrawler-search/scripts/anycrawler_search_api.py page \
 
 python skills/anycrawler-search/scripts/anycrawler_search_api.py news \
   --query "AnyCrawler launch" \
-  --country us \
-  --language en
+  --country us
 ```
 
 For the stable public crawl API contract, read `skills/anycrawler-read/references/public-api.md`.

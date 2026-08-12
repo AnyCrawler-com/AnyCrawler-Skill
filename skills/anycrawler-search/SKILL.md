@@ -32,21 +32,19 @@ python scripts/anycrawler_search_api.py page \
 python scripts/anycrawler_search_api.py news \
   --query "AnyCrawler launch" \
   --country us \
-  --language en \
   --results-per-page 20
 ```
 
 ## Request rules
 
 - All CLI subcommands send `POST /v1/search` with `channel` set to the subcommand name.
-- The request body supports `channel`, `query`, `country`, `language`, `location`, `page`, and `results_per_page`.
+- The request body supports only `channel`, `query`, `country`, `page`, and `results_per_page`.
 - `channel` is required and must be one of `page`, `images`, `news`, `videos`, or `scholar`.
-- `query` is required and must be at most 512 characters.
-- `country`, `language`, and `location` are optional locale hints.
+- `query` is required, must be non-empty after trimming, and must be at most 512 characters.
+- `country` is optional, may be a string or `null`, and must be at most 128 characters after trimming.
 - `page` must be between `1` and `100`; default is `1`.
 - `results_per_page` must be between `1` and `100`; default is `10`.
 - Billing is `ceil(results_per_page / 10) * 20` credits.
-- Requests are cached for 1 hour by channel, query, page, locale fields, and results count, but cache hits do not change pricing.
 - Do not rely on undocumented passthrough fields.
 
 ## Response handling
@@ -68,7 +66,7 @@ Inspect both `data` and `meta`.
 
 ## Retry rules
 
-- Do not blindly retry `400`, `401`, `402`, `403`, or `413`.
+- Do not blindly retry `400`, `401`, `402`, `403`, or `413 PAYLOAD_TOO_LARGE`.
 - `409`, `429`, `502`, and `504` are the main backoff-and-retry cases.
 - For `429`, treat it as quota, rate-limit, or upstream provider pressure first; back off before retrying.
 - For `503`, check service configuration before retrying.
