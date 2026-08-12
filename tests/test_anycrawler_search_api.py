@@ -32,7 +32,7 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
                 self.assertNotIn("cache", content)
                 self.assertNotIn("`language`", content)
                 self.assertNotIn("`location`", content)
-                self.assertNotIn("results_per_page", content)
+                self.assertIn("results_per_page", content)
 
     def test_user_agent_uses_version_file(self) -> None:
         version = (MODULE.SKILL_ROOT / "VERSION").read_text(encoding="utf-8").strip()
@@ -46,6 +46,7 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
             query="site reliability engineering",
             country=None,
             page=1,
+            results_per_page=10,
         )
 
         payload = MODULE._search_payload(args)
@@ -56,6 +57,7 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
                 "channel": "page",
                 "query": "site reliability engineering",
                 "page": 1,
+                "results_per_page": 10,
             },
         )
 
@@ -65,6 +67,7 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
             query="AnyCrawler",
             country="us",
             page=2,
+            results_per_page=25,
         )
 
         payload = MODULE._search_payload(args)
@@ -72,9 +75,10 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
         self.assertEqual(payload["channel"], "news")
         self.assertEqual(payload["country"], "us")
         self.assertEqual(payload["page"], 2)
+        self.assertEqual(payload["results_per_page"], 25)
         self.assertEqual(
             set(payload),
-            {"channel", "query", "country", "page"},
+            {"channel", "query", "country", "page", "results_per_page"},
         )
 
     def test_parser_supports_all_search_channels(self) -> None:
@@ -88,9 +92,24 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
     def test_parser_rejects_removed_search_fields(self) -> None:
         parser = MODULE._build_parser()
 
-        for field in ("--language", "--location", "--results-per-page"):
+        for field in ("--language", "--location"):
             with self.subTest(field=field), self.assertRaises(SystemExit) as exc:
                 parser.parse_args(["page", "--query", "example", field, "value"])
+
+            self.assertEqual(exc.exception.code, 2)
+
+    def test_parser_enforces_results_per_page_bounds(self) -> None:
+        parser = MODULE._build_parser()
+
+        self.assertEqual(
+            parser.parse_args(["page", "--query", "example"]).results_per_page,
+            10,
+        )
+        for value in ("0", "101"):
+            with self.subTest(value=value), self.assertRaises(SystemExit) as exc:
+                parser.parse_args(
+                    ["page", "--query", "example", "--results-per-page", value]
+                )
 
             self.assertEqual(exc.exception.code, 2)
 
@@ -160,6 +179,7 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
             call_kwargs = perform_request.call_args.kwargs
             self.assertEqual(call_kwargs["payload"]["channel"], "page")
             self.assertEqual(call_kwargs["payload"]["query"], "example")
+            self.assertEqual(call_kwargs["payload"]["results_per_page"], 10)
 
     def test_perform_request_posts_to_single_search_endpoint_with_channel_payload(self) -> None:
         class FakeResponse:

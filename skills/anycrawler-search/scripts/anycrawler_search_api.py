@@ -152,6 +152,7 @@ def _search_payload(args: argparse.Namespace) -> dict[str, Any]:
         "channel": args.channel,
         "query": args.query,
         "page": args.page,
+        "results_per_page": args.results_per_page,
     }
     if args.country is not None:
         payload["country"] = args.country
@@ -206,6 +207,14 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
         help="Optional country string mapped to upstream gl, maximum 128 characters.",
     )
     parser.add_argument("--page", type=int, default=1, choices=range(1, 101), metavar="1-100")
+    parser.add_argument(
+        "--results-per-page",
+        type=int,
+        default=10,
+        choices=range(1, 101),
+        metavar="1-100",
+        help="Maximum results to return. Default: 10.",
+    )
 
 
 def _build_parser() -> argparse.ArgumentParser:

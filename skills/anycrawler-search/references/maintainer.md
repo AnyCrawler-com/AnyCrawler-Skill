@@ -4,10 +4,10 @@ This file keeps details that are useful for maintainers but unnecessary for most
 
 ## Version and compatibility
 
-- Skill release: `0.2.4`
+- Skill release: `0.2.5`
 - API compatibility: `AnyCrawler Public API v1`
 - Version source of truth: `skills/anycrawler-search/VERSION`
-- Required outbound header for this release: `User-Agent: Anycrawler Search Agent Skill v0.2.4`
+- Required outbound header for this release: `User-Agent: Anycrawler Search Agent Skill v0.2.5`
 - API source of truth: `app/openapi.json` and `app/src/lib/gateway.ts` in the AnyCrawler application repository
 
 ## Auth details
@@ -30,8 +30,9 @@ JSON body:
 
 ## Billing notes
 
-- Every `/v1/search` page request reserves 20 credits.
-- The public page maps directly to the same Serper page; result count is provider-determined.
+- Every `/v1/search` request reserves `results_per_page * 2` credits.
+- Successful requests settle `actual primary result count * 2` credits and refund the remainder.
+- Logical result pages are assembled from consecutive 10-result Serper pages; a short provider page stops further requests.
 
 ## Gateway headers mirrored by the CLI
 
@@ -47,8 +48,8 @@ CLI wrapper shape:
   "meta": {
     "status": 200,
     "requestId": "req_123",
-    "creditsReserved": 20,
-    "creditsUsed": 20,
+    "creditsReserved": 50,
+    "creditsUsed": 34,
     "browserMsUsed": 0
   }
 }
@@ -57,7 +58,7 @@ CLI wrapper shape:
 ## Release checklist
 
 1. Update `skills/anycrawler-search/VERSION`
-2. Run `python -m unittest tests/test_anycrawler_search_api.py`
+2. Run `python tests/test_anycrawler_search_api.py`
 3. Verify docs still match `app/openapi.json` and `app/src/lib/gateway.ts` in the AnyCrawler application repository
 4. Verify docs still match the current `User-Agent` and API compatibility statement
 
