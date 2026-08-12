@@ -32,6 +32,7 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
                 self.assertNotIn("cache", content)
                 self.assertNotIn("`language`", content)
                 self.assertNotIn("`location`", content)
+                self.assertNotIn("results_per_page", content)
 
     def test_user_agent_uses_version_file(self) -> None:
         version = (MODULE.SKILL_ROOT / "VERSION").read_text(encoding="utf-8").strip()
@@ -45,7 +46,6 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
             query="site reliability engineering",
             country=None,
             page=1,
-            results_per_page=10,
         )
 
         payload = MODULE._search_payload(args)
@@ -56,7 +56,6 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
                 "channel": "page",
                 "query": "site reliability engineering",
                 "page": 1,
-                "results_per_page": 10,
             },
         )
 
@@ -66,7 +65,6 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
             query="AnyCrawler",
             country="us",
             page=2,
-            results_per_page=20,
         )
 
         payload = MODULE._search_payload(args)
@@ -74,10 +72,9 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
         self.assertEqual(payload["channel"], "news")
         self.assertEqual(payload["country"], "us")
         self.assertEqual(payload["page"], 2)
-        self.assertEqual(payload["results_per_page"], 20)
         self.assertEqual(
             set(payload),
-            {"channel", "query", "country", "page", "results_per_page"},
+            {"channel", "query", "country", "page"},
         )
 
     def test_parser_supports_all_search_channels(self) -> None:
@@ -91,7 +88,7 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
     def test_parser_rejects_removed_search_fields(self) -> None:
         parser = MODULE._build_parser()
 
-        for field in ("--language", "--location"):
+        for field in ("--language", "--location", "--results-per-page"):
             with self.subTest(field=field), self.assertRaises(SystemExit) as exc:
                 parser.parse_args(["page", "--query", "example", field, "value"])
 
@@ -197,7 +194,6 @@ class AnyCrawlerSearchApiTests(unittest.TestCase):
             "channel": "images",
             "query": "example",
             "page": 1,
-            "results_per_page": 10,
         }
 
         with mock.patch.object(MODULE.urllib_request, "urlopen", side_effect=fake_urlopen):

@@ -32,19 +32,18 @@ python scripts/anycrawler_search_api.py page \
 python scripts/anycrawler_search_api.py news \
   --query "AnyCrawler launch" \
   --country us \
-  --results-per-page 20
+  --page 2
 ```
 
 ## Request rules
 
 - All CLI subcommands send `POST /v1/search` with `channel` set to the subcommand name.
-- The request body supports only `channel`, `query`, `country`, `page`, and `results_per_page`.
+- The request body supports only `channel`, `query`, `country`, and `page`.
 - `channel` is required and must be one of `page`, `images`, `news`, `videos`, or `scholar`.
 - `query` is required, must be non-empty after trimming, and must be at most 512 characters.
 - `country` is optional, may be a string or `null`, and must be at most 128 characters after trimming.
-- `page` must be between `1` and `100`; default is `1`.
-- `results_per_page` must be between `1` and `100`; default is `10`.
-- Billing is `ceil(results_per_page / 10) * 20` credits.
+- `page` must be between `1` and `100`; default is `1`. It maps directly to the same Serper page, and the provider determines the actual result count.
+- Each page request costs `20` credits.
 - Do not rely on undocumented passthrough fields.
 
 ## Response handling

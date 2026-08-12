@@ -30,14 +30,13 @@ Use `POST /v1/search` for every public search request. Set the request body's
 | `channel` | Required search channel: `page`, `images`, `news`, `videos`, or `scholar` |
 | `query` | Required non-empty search query, maximum 512 characters after trimming |
 | `country` | Optional string or `null`, maximum 128 characters after trimming; mapped to upstream `gl` |
-| `page` | Optional integer from `1` to `100`; default `1` |
-| `results_per_page` | Optional integer from `1` to `100`; default `10` |
+| `page` | Optional integer from `1` to `100`; default `1`; forwarded directly to Serper, which determines the actual result count |
 
 Unknown request fields are rejected with `400 INVALID_REQUEST`.
 
 ## Billing
 
-- Billing formula: `ceil(results_per_page / 10) * 20` credits.
+- Each page request costs `20` credits.
 
 ## Response fields to care about
 

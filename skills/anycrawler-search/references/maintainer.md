@@ -4,10 +4,10 @@ This file keeps details that are useful for maintainers but unnecessary for most
 
 ## Version and compatibility
 
-- Skill release: `0.2.3`
+- Skill release: `0.2.4`
 - API compatibility: `AnyCrawler Public API v1`
 - Version source of truth: `skills/anycrawler-search/VERSION`
-- Required outbound header for this release: `User-Agent: Anycrawler Search Agent Skill v0.2.3`
+- Required outbound header for this release: `User-Agent: Anycrawler Search Agent Skill v0.2.4`
 - API source of truth: `app/openapi.json` and `app/src/lib/gateway.ts` in the AnyCrawler application repository
 
 ## Auth details
@@ -30,8 +30,8 @@ JSON body:
 
 ## Billing notes
 
-- Every `/v1/search` request reserves 20 credits per block of 10 requested results.
-- Billing formula: `ceil(results_per_page / 10) * 20`.
+- Every `/v1/search` page request reserves 20 credits.
+- The public page maps directly to the same Serper page; result count is provider-determined.
 
 ## Gateway headers mirrored by the CLI
 
